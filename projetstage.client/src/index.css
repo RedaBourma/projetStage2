@@ -1,0 +1,304 @@
+@import "tailwindcss";
+@plugin "tailwindcss-animate";
+
+@theme {
+    /* Colors */
+    --color-red: #ea384c;
+    --color-green: #22b573;
+    --color-blue: #1EAEDB;
+    --color-white: #fff;
+    --color-govbg: #f6f7fa;
+    --color-govcard: #fff;
+
+    /* Font families */
+    --font-andalus: 'Andalus', 'Cairo', sans-serif;
+    --font-tajawal: 'Tajawal', 'Cairo', sans-serif;
+
+    /* Border radius */
+    --radius-lg: 1.2rem;
+    --radius-md: 0.6rem;
+    --radius-sm: 0.3rem;
+
+    /* Animation */
+    --animation-fade-in: fade-in 0.7s cubic-bezier(.42,0,.58,1) both;
+}
+
+@keyframes fade-in {
+    0% { opacity: 0; transform: translateY(20px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Custom utilities */
+@utility animate-fade-in {
+    animation: fade-in 0.7s cubic-bezier(.42,0,.58,1) both;
+}
+
+@utility font-andalus {
+    font-family: var(--font-andalus);
+}
+
+@utility bg-govcard {
+    background-color: var(--color-govcard);
+}
+
+@utility bg-govbg {
+    background-color: var(--color-govbg);
+}
+
+@utility text-blue {
+    color: var(--color-blue);
+}
+
+@utility text-red {
+    color: var(--color-red);
+}
+
+@utility bg-green {
+    background-color: var(--color-green);
+}
+
+@utility border-blue {
+    border-color: var(--color-blue);
+}
+
+@layer base {
+    html,
+    body {
+        direction: rtl;
+        font-family: 'Tajawal', 'Cairo', sans-serif;
+        background-color: #f6f7fa;
+        color: #222;
+        box-sizing: border-box;
+    }
+
+    h1, h2, h3, .gov-font {
+        font-family: 'Andalus', 'Cairo', sans-serif;
+        font-weight: 700;
+    }
+
+    .gov-card {
+        background-color: var(--color-govcard);
+        border: 1px solid;
+        border-color: color-mix(in srgb, var(--color-blue) 10%, transparent);
+        box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        border-radius: var(--radius-lg);
+        padding: 1.5rem 1rem;
+        margin-bottom: 1.5rem;
+        transition: all 300ms;
+    }
+
+    .gov-title {
+        font-family: var(--font-andalus);
+        color: var(--color-red);
+        font-size: 1.875rem;
+        line-height: 2.25rem;
+        margin-bottom: 0.5rem;
+    }
+
+    @media (min-width: 768px) {
+        .gov-title {
+            font-size: 2.25rem;
+            line-height: 2.5rem;
+        }
+    }
+
+    .gov-nav {
+        background-color: white;
+        box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+        display: flex;
+        border-radius: var(--radius-lg);
+        margin-top: 0.5rem;
+        margin-bottom: 2rem;
+        overflow: hidden;
+    }
+
+    .gov-tab {
+        flex: 1 1 0%;
+        padding: 0.75rem 1rem;
+        font-size: 1.125rem;
+        line-height: 1.75rem;
+        font-family: var(--font-andalus);
+        color: var(--color-blue);
+        border-bottom: 2px solid white;
+        transition-property: all;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        transition-duration: 150ms;
+        cursor: pointer;
+        text-align: center;
+    }
+
+    .gov-tab:hover {
+        background-color: color-mix(in srgb, var(--color-blue) 10%, transparent);
+    }
+
+    .gov-tab-active {
+        border-color: var(--color-blue);
+        background-color: color-mix(in srgb, var(--color-blue) 5%, transparent);
+        color: var(--color-red);
+    }
+
+    .gov-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        text-align: right;
+        font-size: 1.125rem;
+        line-height: 1.75rem;
+        font-family: var(--font-andalus);
+        color: var(--color-blue);
+    }
+
+    .gov-input, .gov-select {
+        width: 100%;
+        border: 1px solid;
+        border-radius: var(--radius-md);
+        padding: 0.5rem 0.75rem;
+        margin-bottom: 0.75rem;
+        text-align: right;
+        background-color: white;
+        transition-property: all;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        transition-duration: 150ms;
+    }
+
+    .gov-input:focus, .gov-select:focus {
+        --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+        --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--color-blue);
+        box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+    }
+
+    .gov-btn {
+        background-color: var(--color-green);
+        color: white;
+        padding: 0.5rem 1.5rem;
+        border-radius: var(--radius-lg);
+        margin-top: 1rem;
+        font-family: var(--font-andalus);
+        transition-property: all;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        transition-duration: 300ms;
+    }
+
+    .gov-btn:hover {
+        background-color: var(--color-red);
+    }
+
+    .gov-btn-secondary {
+        background-color: var(--color-blue);
+        color: white;
+        padding: 0.5rem 1.25rem;
+        border-radius: var(--radius-lg);
+        margin-left: 0.5rem;
+        font-family: var(--font-andalus);
+        transition-property: all;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        transition-duration: 300ms;
+    }
+
+    .gov-btn-secondary:hover {
+        background-color: var(--color-green);
+    }
+
+    .gov-profile-btn {
+        color: var(--color-blue);
+        background-color: white;
+        border: 1px solid var(--color-blue);
+        padding: 0.5rem 1rem;
+        border-radius: 9999px;
+        transition-property: all;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        transition-duration: 150ms;
+    }
+
+    .gov-profile-btn:hover {
+        background-color: color-mix(in srgb, var(--color-blue) 10%, transparent);
+    }
+
+    /* Tables */
+    .gov-table {
+        width: 100%;
+        background-color: white;
+        border-radius: 0.25rem;
+        box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+        border: 1px solid;
+        border-color: color-mix(in srgb, var(--color-blue) 5%, transparent);
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+        overflow-x: auto;
+    }
+
+    .gov-table th, .gov-table td {
+        padding: 0.75rem 1rem;
+        text-align: right;
+    }
+
+    .gov-table th {
+        border-bottom: 1px solid;
+        background-color: color-mix(in srgb, var(--color-blue) 5%, transparent);
+        color: var(--color-blue);
+        font-family: var(--font-andalus);
+    }
+
+    .gov-table tr:nth-child(even) {
+        background-color: var(--color-govbg);
+    }
+}
+
+.gov-rtl {
+    direction: rtl !important;
+}
+
+.fade-in {
+    animation: fade-in 0.7s cubic-bezier(.42,0,.58,1) both;
+}
+
+.scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+    .scrollbar-none::-webkit-scrollbar {
+        display: none;
+    }
+
+/* Debugging styles to ensure basic CSS is working */
+.bg-red {
+  background-color: var(--color-red);
+}
+
+.bg-blue {
+  background-color: var(--color-blue);
+}
+
+.bg-green {
+  background-color: var(--color-green);
+}
+
+.text-white {
+  color: white;
+}
+
+/* Basic utility styles to ensure they're being generated */
+.p-4 {
+  padding: 1rem;
+}
+
+.m-4 {
+  margin: 1rem;
+}
+
+.rounded {
+  border-radius: 0.25rem;
+}
+
+.text-2xl {
+  font-size: 1.5rem;
+  line-height: 2rem;
+}
+
+.font-bold {
+  font-weight: 700;
+}
+
+.shadow {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
