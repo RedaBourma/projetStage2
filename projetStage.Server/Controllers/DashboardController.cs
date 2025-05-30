@@ -133,6 +133,39 @@ namespace projetStage.Server.Controllers
             return Ok(new { id = existingEntry.entryId });
         }
 
+        [HttpGet("getentry/{entryId}")]
+        public async Task<IActionResult> GetEntryInfo(string entryId)
+        {
+            var userIdClaim = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int currentUserId))
+            {
+                return Unauthorized("User ID not found in token for entry retrieval.");
+            }
+            var entry = await context.DashboardEntries
+                .Include(de => de.Prefecture)
+                .Include(de => de.Circonscription)
+                .FirstOrDefaultAsync(de => de.entryId == entryId && de.UserId == currentUserId);
+            if (entry == null)
+            {
+                return NotFound("Dashboard entry not found or does not belong to the current user.");
+            }
+            var dashboardDto = new DashboardDto
+            {
+                Id = entry.Id,
+                EntryId = entry.entryId,
+                PrefectureId = entry.PrefectureId,
+                PrefectureName = entry.Prefecture.Name,
+                CirconscriptionId = entry.CirconscriptionId,
+                CirconscriptionName = entry.Circonscription.Name,
+                NombreSieges = entry.NombreSieges,
+                NombreBureaux = entry.NombreBureaux,
+                NombreListes = entry.NombreListes,
+                CreatedAt = entry.createdAt,
+                UpdatedAt = entry.UpdatedAt
+            };
+            return Ok(dashboardDto);
+        }
+
     }
     
     public class DashboardDto

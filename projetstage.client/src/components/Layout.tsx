@@ -21,18 +21,19 @@ export default function Layout() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [form1Data, setForm1Data] = useState<any | null>(null);
   const [currentEntryId, setCurrentEntryId] = useState<string | null>(null);
-  // const [isCreating, setIsCreating] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
   const handleEditEntry = (entry: any) => {
-    setForm1Data({
-      prefectureId: entry.prefectureId,
-      circonscriptionId: entry.circonscriptionId,
-      prefectureName: entry.prefectureName,
-      circonscriptionName: entry.circonscriptionName,
-      nombreSieges: entry.nombreSieges,
-      nombreBureaux: entry.nombreBureaux,
-      nombreListes: entry.nombreListes
-    });
+
+    // setForm1Data({
+    //   prefectureId: entry.prefectureId,
+    //   circonscriptionId: entry.circonscriptionId,
+    //   prefectureName: entry.prefectureName,
+    //   circonscriptionName: entry.circonscriptionName,
+    //   nombreSieges: entry.nombreSieges,
+    //   nombreBureaux: entry.nombreBureaux,
+    //   nombreListes: entry.nombreListes
+    // });
     setCurrentEntryId(entry.entryId);
     // setIsCreating(true);
     setActiveTab(1);
@@ -136,6 +137,7 @@ export default function Layout() {
       const { id } = await response.json();
       setCurrentEntryId(id);
       setForm1Data(values);
+      setIsCreating(false);
       // setActiveTab(2);
       
       toast({
@@ -169,7 +171,7 @@ export default function Layout() {
     // Clear previous form data and currentEntryId for a fresh start
     setForm1Data(null);
     setCurrentEntryId(null);
-    // setIsCreating(true);
+    setIsCreating(true);
     // Go to FormTab1 to start filling out the new entry
     setActiveTab(1);
     
@@ -181,7 +183,8 @@ export default function Layout() {
   ///////////////////////////////////hna 3lx ghaytclira ana baghi mli nbrk 3la zkmo lbutton
   const handleTabChange = (idx: number) => {
     // if (idx === 0) {
-    //   // Clear session when returning to dashboard
+    // Only clear session when explicitly clicking "جديد" button, not when returning to dashboard
+    // This allows users to navigate back to dashboard and return to their work
     //   setCurrentEntryId(null);
     //   setForm1Data(null);
     //   setIsCreating(false);
@@ -195,12 +198,13 @@ export default function Layout() {
     if (tabIdx === 0) return false;
     
     // First form tab (1) is enabled if we're creating/editing
-    // if (tabIdx === 1) return !isCreating;
+    if (tabIdx === 1) return false;
     
     // Form tabs (2, 3) are enabled only if form1Data exists and we have an entryId
     // This ensures user must complete form1 before proceeding
-    ////////////////////// anrj3 lhna
-    if (tabIdx > 1 && tabIdx <= 3) return !form1Data || !currentEntryId;
+    if(currentEntryId && tabIdx > 1 && tabIdx <= 3) return false;
+
+    if (!currentEntryId && tabIdx > 1 && tabIdx <= 3) return !form1Data || !currentEntryId;
     
     // Form 4 is always disabled for now
     if (tabIdx === 4) return true;
@@ -231,7 +235,7 @@ export default function Layout() {
       </header>
 
       <nav className="gov-nav px-2">
-        <div className="flex flex-row-reverse w-full">
+        <div className="flex flex-row w-full">
           {TAB_LABELS.map((l, idx) => (
             <div
               key={l}
@@ -266,6 +270,7 @@ export default function Layout() {
             onUpdate={handleForm1Update}
             // initialValues will be populated if editing, otherwise null for new entry
             initialValues={form1Data}
+            isCreating={isCreating}
             // Pass the currentEntryId to FormTab1. It's either a new backend-generated ID
             // or the ID of the entry being edited.
             entryId={currentEntryId}

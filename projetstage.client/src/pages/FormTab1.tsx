@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/App"; 
+import type { DashboardEntry } from "./DashboardTab";
 
 const LABELS = {
     title: "الإعدادات الأساسية",
@@ -39,9 +40,10 @@ interface Props {
     onUpdate: (values: any) => void;
     initialValues?: any | null;                          // Optional initial values for form fields
     entryId: string | null;                                    // Unique entry ID from parent
+    isCreating: boolean
 }
 
-export default function FormTab1({ onSubmit, onUpdate,initialValues, entryId }: Props) {
+export default function FormTab1({ onSubmit, onUpdate,initialValues, entryId, isCreating}: Props) {
     const { toast } = useToast();
     const { logout } = useAuth();
     // Form state variables
@@ -58,9 +60,64 @@ export default function FormTab1({ onSubmit, onUpdate,initialValues, entryId }: 
     const [isLoadingPrefectures, setIsLoadingPrefectures] = useState(false);
     const [isLoadingCirconscriptions, setIsLoadingCirconscriptions] = useState(false);
     
+    const [initialCirconscriptionName, setInitialCirconscriptionName] = useState<string | null>(null);
+
+    
     useEffect(() =>{
         const fetchFormDataForUpdate = async () => {
-            
+           if(entryId == null){
+            return;
+           } 
+
+           try{
+
+                const token = localStorage.getItem("auth_token");
+                if (!token) {
+                    toast({
+                        title: "Authentication Required",
+                        description: "Please log in to view prefectures.",
+                        variant: "destructive",
+                    });
+                    logout();
+                    return;
+                }
+
+                const response = await fetch(`/api/Dashboard/getentry/${entryId}`, {
+                    method: "GET",
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    const errorDetail = await response.text();
+                    
+                    if (response.status === 401) {
+                        toast({
+                            title: "Session Expired",
+                            description: "Your session has expired. Please log in again.",
+                            variant: "destructive",
+                        });
+                        logout();
+                        return;
+                    }
+                    
+                    throw new Error(`Failed to fetch formdata: ${response.status} - ${errorDetail}`);
+                }
+                
+                const data: DashboardEntry = await response.json();
+                setDropdown1(data.prefectureName)
+                setSelectedPrefectureId(data.prefectureId)
+                setInitialCirconscriptionName(data.circonscriptionName)
+                setNum1(data.nombreBureaux)
+                setNum2(data.nombreSieges)
+                setNum3(data.nombreListes)
+                // setDropdown2()
+                
+
+           }catch(error: any){
+
+           }
         }
         fetchFormDataForUpdate();
     },[])
@@ -179,10 +236,11 @@ export default function FormTab1({ onSubmit, onUpdate,initialValues, entryId }: 
                 setCirconscriptions(data);
                 
                 // If initialValues has a dropdown2 value and we're editing, select the matching circonscription
-                if (initialValues?.dropdown2) {
-                    const circonscription = data.find((c: any) => c.name === initialValues.dropdown2);
-                    if (circonscription) {
-                        setDropdown2(circonscription.name);
+                if (initialCirconscriptionName && data.length > 0) {
+                    const circonscriptionToSelect = data.find((c: any) => c.name === initialCirconscriptionName);
+                    if (circonscriptionToSelect) {
+                        setDropdown2(circonscriptionToSelect.name);
+                        setInitialCirconscriptionName(null);
                     }
                 } else {
                     // Clear dropdown2 if we're not editing or if there's no matching circonscription
@@ -370,6 +428,7 @@ export default function FormTab1({ onSubmit, onUpdate,initialValues, entryId }: 
             //     setSelectedPrefectureId(null);
             // }
             
+            isCreating = true;
         } catch (error: any) {
             console.error("Error submitting form:", error);
             toast({

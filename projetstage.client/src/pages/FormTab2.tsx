@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 // ==========================================
 // ASP.NET Backend Integration Guide
@@ -75,11 +75,11 @@ import React, { useState } from "react";
 // - Each detail table would have a foreign key reference to its parent row
 
 // Mock options - replace with backend data when integrating
-const MOCK_OPTIONS = [
-    { value: "option1", label: "الخيار ١" },
-    { value: "option2", label: "الخيار ٢" },
-    { value: "option3", label: "الخيار ٣" },
-];
+// const MOCK_OPTIONS = [
+//     { value: "option1", label: "الخيار ١" },
+//     { value: "option2", label: "الخيار ٢" },
+//     { value: "option3", label: "الخيار ٣" },
+// ];
 
 // For backend integration, add this function to fetch dropdown options:
 // const fetchDropdownOptions = async () => {
@@ -124,43 +124,107 @@ interface FormTab2Props {
  * 
  * The number of rows is determined by form1Data (num1 for main table, num2 for detail tables)
  */
-export default function FormTab2({ form1Data }: FormTab2Props) {
-    // Get spreadsheet row counts from Form1 data, fallback to default if undefined
-    const n1 = typeof form1Data?.num1 === "number" ? form1Data.num1 : 3;
-    const n2 = typeof form1Data?.num2 === "number" ? form1Data.num2 : 4;
+interface table1 {
+    col: string;
+    number: number;
+}
+interface table2 {
+    parentRowIndex: number;
+    rows: {
+        select: string,
+        input1: string,
+        input2: string, 
+    }[];
+}
+export default function FormTab2({ form1Data, entryId }: FormTab2Props) {
+    // State for table dimensions from backend
+    const [tableDimensions, setTableDimensions] = useState<{ n1: number, n2: number }>({ 
+        n1: typeof form1Data?.num1 === "number" ? form1Data.num1 : 3,
+        n2: typeof form1Data?.num2 === "number" ? form1Data.num2 : 4
+    });
+    // const { n1, n2 } = tableDimensions;
+    const [table1, setTable1] = useState<table1[]>([]);
+    const [table2Data, setTable2Data] = useState<table2[]>([]);
+    // Track which row in table1 is expanded to show its detail table
+    const [expandedRowIndex, setExpandedRowIndex] = useState<number | null>(null);
+    // Success message state
+    const [successMsg, setSuccessMsg] = useState<string | null>(null);
+    // Track options for select dropdown
+    const [options] = useState(MOCK_OPTIONS);
+
+    // Fetch table dimensions from backend
+    // useEffect(() => {
+    //     if (entryId) {
+    //         fetch(`/api/Forms/GetFormTables/${entryId}`, {
+    //             headers: { 
+    //                 "Authorization": `Bearer ${localStorage.getItem("auth_token")}`
+    //             }
+    //         })
+    //         .then(response => {
+    //             if (!response.ok) throw new Error("Failed to fetch table data");
+    //             return response.json();
+    //         })
+    //         .then(data => {
+    //             // Update dimensions based on backend data
+    //             if (data && Array.isArray(data)) {
+    //                 const mainTableCount = data.length;
+    //                 const detailTableCount = data[0]?.TableRows?.length || tableDimensions.n2;
+                    
+    //                 setTableDimensions({
+    //                     n1: mainTableCount || tableDimensions.n1,
+    //                     n2: detailTableCount
+    //                 });
+
+    //                 // Initialize tables with backend data
+    //                 setTable1(Array.from({ length: mainTableCount }, (_, i) => ({
+    //                     col1: data[i]?.TableName || `العنصر ${i + 1}`,
+    //                     number: i + 1
+    //                 })));
+
+    //                 setTable2Data(Array.from({ length: mainTableCount }, (_, i) => ({
+    //                     parentRowIndex: i,
+    //                     rows: Array.from({ length: detailTableCount }, () => ({
+    //                         select: "",
+    //                         input1: "",
+    //                         input2: ""
+    //                     }))
+    //                 })));
+    //             }
+    //         })
+    //         .catch(error => {
+    //             console.error("Error fetching table dimensions:", error);
+    //         });
+    //     }
+    // }, [entryId]);
+
+    // Use tableDimensions instead of direct n1/n2
 
     // For first table - only first column is editable, second column is auto-numbered
-    const [table1, setTable1] = useState<{ col1: string; number: number }[]>(() =>
-        Array.from({ length: n1 }, (_, i) => ({
-            col1: `العنصر ${i + 1}`,
-            number: i + 1
-        }))
-    );
+    // const [table1, setTable1] = useState<{ col1: string; number: number }[]>(() =>
+    //     Array.from({ length: n1 }, (_, i) => ({
+    //         col1: `العنصر ${i + 1}`,
+    //         number: i + 1
+    //     }))
+    // );
+    
     
     // For second tables - one per row in first table, each with n2 rows
     // This creates a parent-child relationship between tables
-    const [table2Data, setTable2Data] = useState<{ 
-        parentRowIndex: number;
-        rows: { select: string; input1: string; input2: string }[] 
-    }[]>(() => 
-        Array.from({ length: n1 }, (_, i) => ({
-            parentRowIndex: i,
-            rows: Array.from({ length: n2 }, () => ({
-                select: "",
-                input1: "",
-                input2: ""
-            }))
-        }))
-    );
+    // const [table2Data, setTable2Data] = useState<{ 
+    //     parentRowIndex: number;
+    //     rows: { select: string; input1: string; input2: string }[] 
+    // }[]>(() => 
+    //     Array.from({ length: n1 }, (_, i) => ({
+    //         parentRowIndex: i,
+    //         rows: Array.from({ length: n2 }, () => ({
+    //             select: "",
+    //             input1: "",
+    //             input2: ""
+    //         }))
+    //     }))
+    // );
+
     
-    // Track which row in table1 is expanded to show its detail table
-    const [expandedRowIndex, setExpandedRowIndex] = useState<number | null>(null);
-    
-    // Success message state
-    const [successMsg, setSuccessMsg] = useState<string | null>(null);
-    
-    // Track options for select dropdown
-    const [options] = useState(MOCK_OPTIONS);
     
     /**
      * Handle changes to the first table's editable column

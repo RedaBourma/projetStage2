@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast"; // Assuming you have shadcn/ui toast
 import { useAuth } from "@/App"; // Import the auth context
 
-interface DashboardEntry {
+export interface DashboardEntry {
   id: number; 
   entryId: string | null;
   prefectureId: number;
