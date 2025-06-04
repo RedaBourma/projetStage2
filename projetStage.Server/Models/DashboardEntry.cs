@@ -21,5 +21,7 @@ namespace projetStage.Server.Models
         public int NombreListes { get; set; }
         public DateTime createdAt { get; set; }
         public DateTime? UpdatedAt { get; set; } = null;
+
+        public ICollection<Bureaux> Bureaux { get; set; } = new List<Bureaux>();
     }
 }

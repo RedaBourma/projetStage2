@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using projetStage.Server;
 
@@ -11,9 +12,11 @@ using projetStage.Server;
 namespace projetStage.Server.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250530150000_AddBureauAndPartiRelationshipsToListes")]
+    partial class AddBureauAndPartiRelationshipsToListes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -30,16 +33,11 @@ namespace projetStage.Server.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("DashboardEntryId")
-                        .HasColumnType("int");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(255)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("DashboardEntryId");
 
                     b.ToTable("Bureaux");
                 });
@@ -120,7 +118,10 @@ namespace projetStage.Server.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("BureauId")
+                    b.Property<int?>("BureauxId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NumBureau")
                         .HasColumnType("int");
 
                     b.Property<int>("NumListe")
@@ -129,14 +130,17 @@ namespace projetStage.Server.Migrations
                     b.Property<int>("PartiId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("PartisId")
+                        .HasColumnType("int");
+
                     b.Property<string>("PnAgentListe")
                         .HasColumnType("nvarchar(255)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BureauId");
+                    b.HasIndex("BureauxId");
 
-                    b.HasIndex("PartiId");
+                    b.HasIndex("PartisId");
 
                     b.ToTable("Listes");
                 });
@@ -203,17 +207,6 @@ namespace projetStage.Server.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("projetStage.Server.Models.Bureaux", b =>
-                {
-                    b.HasOne("projetStage.Server.Models.DashboardEntry", "DashboardEntry")
-                        .WithMany("Bureaux")
-                        .HasForeignKey("DashboardEntryId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("DashboardEntry");
-                });
-
             modelBuilder.Entity("projetStage.Server.Models.Circonscription", b =>
                 {
                     b.HasOne("projetStage.Server.Models.Prefecture", "Prefecture")
@@ -256,15 +249,11 @@ namespace projetStage.Server.Migrations
                 {
                     b.HasOne("projetStage.Server.Models.Bureaux", "Bureaux")
                         .WithMany("Listes")
-                        .HasForeignKey("BureauId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("BureauxId");
 
                     b.HasOne("projetStage.Server.Models.Partis", "Partis")
                         .WithMany("Listes")
-                        .HasForeignKey("PartiId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("PartisId");
 
                     b.Navigation("Bureaux");
 
@@ -279,11 +268,6 @@ namespace projetStage.Server.Migrations
             modelBuilder.Entity("projetStage.Server.Models.Circonscription", b =>
                 {
                     b.Navigation("DashboardEntries");
-                });
-
-            modelBuilder.Entity("projetStage.Server.Models.DashboardEntry", b =>
-                {
-                    b.Navigation("Bureaux");
                 });
 
             modelBuilder.Entity("projetStage.Server.Models.Partis", b =>

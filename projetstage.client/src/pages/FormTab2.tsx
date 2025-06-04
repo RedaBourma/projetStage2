@@ -1,105 +1,23 @@
 import React, { useState, useEffect } from "react";
+import { useAuth } from "@/App"; 
+import { useToast } from "@/hooks/use-toast";
 
-// ==========================================
-// ASP.NET Backend Integration Guide
-// ==========================================
-//
-// ID USAGE WITH BACKEND:
-// The entryId prop is critical for FormTab2 to:
-// 1. Retrieve related tables data from the backend
-// 2. Save table data with proper parent-child relationships
-// 3. Maintain data integrity across form submissions
-//
-// BACKEND IMPLEMENTATION (C#):
-// [HttpGet("GetFormTables/{entryId}")]
-// public IActionResult GetFormTables(string entryId)
-// {
-//     // Get all tables associated with this entry
-//     var tables = _dbContext.FormTables
-//         .Where(t => t.EntryId == entryId)
-//         .Include(t => t.TableRows) // Include child rows
-//         .ToList();
-//     
-//     return Ok(tables);
-// }
-//
-// [HttpPost("SaveFormTables")]
-// public IActionResult SaveFormTables(FormTablesDto data)
-// {
-//     // data.EntryId should contain the entry ID
-//     // First, remove existing tables for this entry (if updating)
-//     var existingTables = _dbContext.FormTables.Where(t => t.EntryId == data.EntryId);
-//     _dbContext.FormTables.RemoveRange(existingTables);
-//     
-//     // Add new tables with the entry ID as foreign key
-//     foreach (var table in data.Tables)
-//     {
-//         var newTable = new FormTable
-//         {
-//             EntryId = data.EntryId, // Link to the parent entry
-//             TableName = table.TableName,
-//             // Set other properties...
-//         };
-//         
-//         // Add rows for this table
-//         foreach (var row in table.Rows)
-//         {
-//             newTable.TableRows.Add(new TableRow
-//             {
-//                 // Row properties...
-//             });
-//         }
-//         
-//         _dbContext.FormTables.Add(newTable);
-//     }
-//     
-//     _dbContext.SaveChanges();
-//     return Ok(new { success = true });
-// }
-//
-// This component would integrate with the following backend endpoints:
-// 1. GET /api/Forms/GetFormTables?form1Id={id} - Retrieves existing table data for this form
-//    - Returns main table rows and child detail tables if they exist
-//
-// 2. POST /api/Forms/SaveFormTables - Saves the main and detail tables
-//    - Accepts both parent and child table data in a single request
-//    - Returns updated data with server-generated IDs
-//
-// 3. GET /api/Forms/GetTableDropdownOptions - Retrieves the options for the select dropdown
-//    - Returns options with Arabic labels
-//    - Format: Array of { value: string, label: string }
-//
-// The model structure on the backend would be:
-// - FormTableData model with properties for the main table and collection of detail tables
-// - Detail tables would be linked to main table rows through parent-child relationship
-// - Each detail table would have a foreign key reference to its parent row
 
-// Mock options - replace with backend data when integrating
-// const MOCK_OPTIONS = [
-//     { value: "option1", label: "الخيار ١" },
-//     { value: "option2", label: "الخيار ٢" },
-//     { value: "option3", label: "الخيار ٣" },
-// ];
-
-// For backend integration, add this function to fetch dropdown options:
-// const fetchDropdownOptions = async () => {
-//     try {
-//         const response = await fetch("/api/Forms/GetTableDropdownOptions", {
-//             headers: { 
-//                 "Authorization": `Bearer ${localStorage.getItem("auth_token")}`
-//             }
-//         });
-//         if (!response.ok) throw new Error("Failed to fetch dropdown options");
-//         const data = await response.json();
-//         
-//         // Replace MOCK_OPTIONS with the fetched data
-//         // Format should be: { value: string, label: string }[]
-//         return data.options;
-//     } catch (error) {
-//         console.error("Error fetching dropdown options:", error);
-//         return MOCK_OPTIONS; // Fallback to mock data on error
-//     }
-// };
+const labels = {
+    tabTitle: "إنشاء المكاتب و اللوائح",
+    mainTable: "المكاتب لمركزية",
+    col1: "إسم المكتب المركزي",
+    col2: "رقم المكتب",
+    detailTable: "الجدول التفصيلي",
+    expand: "عرض التفاصيل",
+    collapse: "إخفاء التفاصيل",
+    t2sel: "الإنتماء السياسي",
+    t2i1: "الإسم الشخصي و العائلي لوكيل الائحة",
+    t2i2: "رقم الائحة",
+    save: "حفظ",
+    update:"تحديث",
+    noTableSelected: "اختر صفاً من الجدول الرئيسي لعرض تفاصيله",
+};
 
 /**
  * Props for FormTab2 Component
@@ -114,16 +32,30 @@ interface FormTab2Props {
     entryId: string | null; // Unique entry ID from parent
 }
 
-/**
- * FormTab2 Component - Excel-like Nested Tables
- * 
- * This component displays dynamic nested tables:
- * - A main table with editable text and auto-numbered columns
- * - Detail tables for each row in the main table that can be expanded/collapsed
- * - Each detail table has a dropdown and two text inputs per row
- * 
- * The number of rows is determined by form1Data (num1 for main table, num2 for detail tables)
- */
+interface PartisDto {
+    id: number;
+    name: string;
+}
+
+interface ListeDto {
+    Id: number;
+    pnAgentListe?: string;
+    numListe: number;
+    parti?: PartisDto
+}
+
+interface BereauDetailsDto {
+    id: number;
+    name?: string;
+    dashboardEntryId?: number
+    listes: ListeDto[];
+}
+
+interface BureauDataResponse {
+    bureauDetails: BereauDetailsDto[];
+    isNew: boolean;
+}
+
 interface table1 {
     col: string;
     number: number;
@@ -136,11 +68,18 @@ interface table2 {
         input2: string, 
     }[];
 }
+
+interface tablesSize {
+    nombreBureaux: number,
+    nombreListes: number
+}
 export default function FormTab2({ form1Data, entryId }: FormTab2Props) {
+    const { toast } = useToast();
+    const { logout } = useAuth();
     // State for table dimensions from backend
-    const [tableDimensions, setTableDimensions] = useState<{ n1: number, n2: number }>({ 
-        n1: typeof form1Data?.num1 === "number" ? form1Data.num1 : 3,
-        n2: typeof form1Data?.num2 === "number" ? form1Data.num2 : 4
+    const [tableDimensions, setTableDimensions] = useState<tablesSize>({ 
+        nombreBureaux: 0,
+        nombreListes:0 
     });
     // const { n1, n2 } = tableDimensions;
     const [table1, setTable1] = useState<table1[]>([]);
@@ -150,81 +89,162 @@ export default function FormTab2({ form1Data, entryId }: FormTab2Props) {
     // Success message state
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
     // Track options for select dropdown
-    const [options] = useState(MOCK_OPTIONS);
+    const [partieSelect, setPartieSelect] = useState<PartisDto[]>([]);
+    const [isNewEntryForBureaux, setIsNewEntryForBureaux] = useState<boolean>(true);
 
-    // Fetch table dimensions from backend
-    // useEffect(() => {
-    //     if (entryId) {
-    //         fetch(`/api/Forms/GetFormTables/${entryId}`, {
-    //             headers: { 
-    //                 "Authorization": `Bearer ${localStorage.getItem("auth_token")}`
-    //             }
-    //         })
-    //         .then(response => {
-    //             if (!response.ok) throw new Error("Failed to fetch table data");
-    //             return response.json();
-    //         })
-    //         .then(data => {
-    //             // Update dimensions based on backend data
-    //             if (data && Array.isArray(data)) {
-    //                 const mainTableCount = data.length;
-    //                 const detailTableCount = data[0]?.TableRows?.length || tableDimensions.n2;
-                    
-    //                 setTableDimensions({
-    //                     n1: mainTableCount || tableDimensions.n1,
-    //                     n2: detailTableCount
-    //                 });
+    const loadTablesSize = async () => {
+        if(!entryId) return;
 
-    //                 // Initialize tables with backend data
-    //                 setTable1(Array.from({ length: mainTableCount }, (_, i) => ({
-    //                     col1: data[i]?.TableName || `العنصر ${i + 1}`,
-    //                     number: i + 1
-    //                 })));
+        const token = localStorage.getItem("auth_token");
+                if (!token) {
+                    toast({
+                        title: "Authentication Required",
+                        description: "Please log in to view prefectures.",
+                        variant: "destructive",
+                    });
+                    logout();
+                    return;
+                }
 
-    //                 setTable2Data(Array.from({ length: mainTableCount }, (_, i) => ({
-    //                     parentRowIndex: i,
-    //                     rows: Array.from({ length: detailTableCount }, () => ({
-    //                         select: "",
-    //                         input1: "",
-    //                         input2: ""
-    //                     }))
-    //                 })));
-    //             }
-    //         })
-    //         .catch(error => {
-    //             console.error("Error fetching table dimensions:", error);
-    //         });
-    //     }
-    // }, [entryId]);
+        fetch(`/api/Dashboard/getBureauxListes/${entryId}`, {
+            method: "GET",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+            }
+        })
+        .then(response => {
+            if (!response.ok) throw new Error(`Failed to fetch table sizes: ${response.statusText}`);
+            return response.json();
+        })
+        .then((data: tablesSize) => {
+           const mainTablecount = data.nombreBureaux;
+           const secondtablecount = data.nombreListes;
 
-    // Use tableDimensions instead of direct n1/n2
+           console.log("tables count: ",mainTablecount, secondtablecount)
 
-    // For first table - only first column is editable, second column is auto-numbered
-    // const [table1, setTable1] = useState<{ col1: string; number: number }[]>(() =>
-    //     Array.from({ length: n1 }, (_, i) => ({
-    //         col1: `العنصر ${i + 1}`,
-    //         number: i + 1
-    //     }))
-    // );
-    
-    
-    // For second tables - one per row in first table, each with n2 rows
-    // This creates a parent-child relationship between tables
-    // const [table2Data, setTable2Data] = useState<{ 
-    //     parentRowIndex: number;
-    //     rows: { select: string; input1: string; input2: string }[] 
-    // }[]>(() => 
-    //     Array.from({ length: n1 }, (_, i) => ({
-    //         parentRowIndex: i,
-    //         rows: Array.from({ length: n2 }, () => ({
-    //             select: "",
-    //             input1: "",
-    //             input2: ""
-    //         }))
-    //     }))
-    // );
+           setTableDimensions({
+            nombreBureaux: mainTablecount,
+            nombreListes: secondtablecount
+           })
+           
+           // Table initialization moved to useEffect
+        })
+    }
 
-    
+    const fetchAllParties = async () => {
+        const token = localStorage.getItem("auth_token");
+        if(!token) {
+            toast({
+                title: "Authentication Required",
+                description: "login to fetch parties",
+                variant: "destructive",
+            });
+            logout();
+            return;
+        }
+
+        try {
+            const response = await fetch("/api/Partis/getPartis", {
+                method: "GET",
+                headers: {"Authorization": `Bearer ${token}`}
+            });
+            if(!response.ok) {
+                const errorDetail = await response.text();
+                if(response.status === 401) {logout(); return;}
+                throw new Error(`failed to fetch parties: ${response.status} - ${errorDetail}`)
+            }
+            const data: PartisDto[] = await response.json();
+            console.log("first element id of data: " + data[0].id)
+            setPartieSelect(data)
+        }catch(error: any) {
+
+        }
+    }
+
+    const loadData = async () => {
+        if(!entryId) return;
+
+        const token = localStorage.getItem("auth_token");
+        if (!token) {
+            toast({
+                title: "Authentication Required",
+                description: "Please log in to view prefectures.",
+                variant: "destructive",
+            });
+            logout();
+            return;
+        }
+
+        try{
+            const response = await fetch(`/api/Bureaux/getBureauById/${entryId}`, {
+                method: "GET",
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                }
+            });
+
+            if (!response.ok) throw new Error(`Failed to fetch table sizes: ${response.statusText}`);
+
+            const responseData: BureauDataResponse = await response.json();
+            const data: BereauDetailsDto[] = responseData.bureauDetails;
+            const isNewR: boolean = responseData.isNew
+            isNewR? setIsNewEntryForBureaux(true) : setIsNewEntryForBureaux(false);
+            console.log("xooooof", responseData, isNewR)
+            // console.log(data)
+            // console.log(response.statusText)
+            
+            if (data && Array.isArray(data)){
+                setTable1(Array.from({ length: tableDimensions.nombreBureaux }, (_, i) => ({
+                    col: data[i]?.name || ` المكتب المركزي رقم ${i + 1}`,
+                    number: i + 1
+                })));
+
+            setTable2Data(Array.from({ length: tableDimensions.nombreBureaux }, (_, bureauIndex) => {
+                const bureau = data[bureauIndex];
+                const rows = Array.from({ length: tableDimensions.nombreListes }, (_, listeIndex) => {
+                    const liste = bureau?.listes?.[listeIndex];
+                    return {
+                        select: liste?.parti?.id?.toString() || "", // Convert party ID to string
+                        input1: liste?.pnAgentListe || "",
+                        input2: liste?.numListe?.toString() || ""
+                    };
+                });
+
+                return {
+                    parentRowIndex: bureauIndex,
+                    rows: rows
+                };
+            }));
+            }
+
+            
+        }catch(error: any){
+            console.error("Error fetching data for tables:", error);
+            toast({
+                title: "Error",
+                description: `Failed to load data for tables: ${error.message}`,
+                variant: "destructive",
+            });
+        }
+
+    }
+
+    useEffect(() => {
+        loadTablesSize();
+        fetchAllParties();
+        // Moved loadData to a separate useEffect that depends on tableDimensions
+    }, []);
+
+    // This effect runs when tableDimensions changes
+    useEffect(() => {
+        // Only load data when dimensions are properly set
+        if (tableDimensions.nombreBureaux > 0 && tableDimensions.nombreListes > 0) {
+            loadData();
+        }
+    }, [tableDimensions]);
+
+
+      
     
     /**
      * Handle changes to the first table's editable column
@@ -234,7 +254,7 @@ export default function FormTab2({ form1Data, entryId }: FormTab2Props) {
     const handleTable1Change = (rowIndex: number, value: string) => {
         setTable1(prev => {
             const newTable = [...prev];
-            newTable[rowIndex] = { ...newTable[rowIndex], col1: value };
+            newTable[rowIndex] = { ...newTable[rowIndex], col: value };
             return newTable;
         });
     };
@@ -300,71 +320,86 @@ export default function FormTab2({ form1Data, entryId }: FormTab2Props) {
      * For demo, just shows success message and logs data
      * @param {React.FormEvent} e - Form event
      */
-    const handleSave = (e: React.FormEvent) => {
+    const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        // Create a structured data object for submission
-        const formData = {
-            mainTable: table1,
-            detailTables: table2Data,
-            form1Id: form1Data?.id // Reference to parent form
-        };
-        
-        // When integrating with backend, send this data to the server
-        // const saveToBackend = async () => {
-        //     try {
-        //         const response = await fetch("/api/Forms/SaveFormTables", {
-        //             method: "POST",
-        //             headers: {
-        //                 "Content-Type": "application/json",
-        //                 "Authorization": `Bearer ${localStorage.getItem("auth_token")}`
-        //             },
-        //             body: JSON.stringify(formData)
-        //         });
-        //         
-        //         if (!response.ok) {
-        //             throw new Error("Failed to save table data");
-        //         }
-        //         
-        //         return await response.json();
-        //     } catch (error) {
-        //         console.error("Error saving table data:", error);
-        //         throw error;
-        //     }
-        // };
-        // 
-        // saveToBackend()
-        //     .then(data => {
-        //         // Update state with server-assigned IDs if needed
-        //         setSuccessMsg("تم حفظ البيانات بنجاح");
-        //         setTimeout(() => setSuccessMsg(null), 2000);
-        //     })
-        //     .catch(err => {
-        //         setErrorMsg("حدث خطأ أثناء حفظ البيانات");
-        //         setTimeout(() => setErrorMsg(null), 2000);
-        //     });
-        
-        // For demo, just log the data and show success message
-        console.log("Form data to save:", formData);
+
+        const token = localStorage.getItem("auth_token");
+        if (!token) {
+            toast({
+                title: "Authentication Required",
+                description: "Please log in to view prefectures.",
+                variant: "destructive",
+            });
+            logout();
+            return;
+        }
+
+        // // Prepare data for backend submission
+        const dataToSave = table1.map((bureauRow, bureauIndex) => ({
+            name: bureauRow.col,
+            dashboardEntryGUID: entryId, // This is the string GUID
+            listes: table2Data[bureauIndex].rows.map(listRow => ({
+                // id: listRow.selec, // Will be undefined for new lists
+                pnAgentListe: listRow.input1,
+                parti: {id:parseInt(listRow.select)},
+            }))
+        }));
+
+        let method: "POST" | "PUT";
+        let url: string;
+
+        // This `isNewEntryForBureaux` state correctly determines if it's a new creation
+        if (isNewEntryForBureaux) {
+            method = "POST";
+            url = `/api/Bureaux/saveBureauAndLists`; // <--- This endpoint is called
+        } else {
+            method = "PUT";
+            url = `/api/Bureaux/updateBureauxAndLists/${entryId}`;
+        }
+
+        try {
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`,
+                },
+                body: JSON.stringify(dataToSave),
+            });
+
+            // ... (Success/Error handling) ...
+
+            if (!response.ok) {
+                    const errorDetail = await response.text();
+                    
+                    if (response.status === 401) {
+                        toast({
+                            title: "Session Expired",
+                            description: "Your session has expired. Please log in again.",
+                            variant: "destructive",
+                        });
+                        logout();
+                        return;
+                    }
+                    
+                    throw new Error(`Failed to save data: ${response.status} - ${errorDetail}`);
+                }
+
+        } catch (error: any) {
+            console.error("Error saving data:", error);
+            toast({
+                title: "Error",
+                description: `failed to save data: ${error.message}`,
+                variant: "destructive",
+            });
+        }
+        // console.log("Form data to save:", formData);
         setSuccessMsg("تم حفظ البيانات بنجاح");
         setTimeout(() => setSuccessMsg(null), 2000);
     };
 
     // Labels for UI text
-    const labels = {
-        tabTitle: "إنشاء المكاتب و اللوائح",
-        mainTable: "المكاتب لمركزية",
-        col1: "إسم المكتب المركزي",
-        col2: "رقم المكتب",
-        detailTable: "الجدول التفصيلي",
-        expand: "عرض التفاصيل",
-        collapse: "إخفاء التفاصيل",
-        t2sel: "الإنتماء السياسي",
-        t2i1: "الإسم الشخصي و العائلي لوكيل الائحة",
-        t2i2: "رقم الائحة",
-        save: "حفظ",
-        noTableSelected: "اختر صفاً من الجدول الرئيسي لعرض تفاصيله",
-    };
     
     return (
         <div className="p-6 w-full" dir="rtl">
@@ -417,13 +452,22 @@ export default function FormTab2({ form1Data, entryId }: FormTab2Props) {
                                                     <input
                                                         type="text"
                                                         className="gov-input text-right border-0 bg-transparent focus:ring-0 focus:border-b-2 p-0"
-                                                        value={row.col1}
+                                                        value={row.col}
                                                         onChange={(e) => handleTable1Change(rowIndex, e.target.value)}
                                                         placeholder="أدخل نصاً..."
                                                     />
                                                 </td>
                                                 <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-500 text-right">
-                                                    {row.number}
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        {row.number}
+                                                        {table2Data
+                                                            .find(d => d.parentRowIndex === rowIndex)
+                                                            ?.rows.every(row => row.select && row.input1 && row.input2) && (
+                                                            <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                            </svg>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td className="px-3 py-3 whitespace-nowrap text-sm text-center">
                                                     <button
@@ -477,13 +521,13 @@ export default function FormTab2({ form1Data, entryId }: FormTab2Props) {
                                                                                         onChange={(e) => handleSelectChange(
                                                                                             rowIndex, 
                                                                                             detailRowIndex, 
-                                                                                            e.target.value
+                                                                                            e.target.value,
                                                                                         )}
                                                                                     >
-                                                                                        <option value="">اختر...</option>
-                                                                                        {options.map((opt) => (
-                                                                                            <option key={opt.value} value={opt.value}>
-                                                                                                {opt.label}
+                                                                                        <option value="" key={"default"}>اختر...</option>
+                                                                                        {partieSelect.map((opt) => (
+                                                                                            <option key={opt.id} value={opt.id}>
+                                                                                                {opt.name}
                                                                                             </option>
                                                                                         ))}
                                                                                     </select>
@@ -504,7 +548,7 @@ export default function FormTab2({ form1Data, entryId }: FormTab2Props) {
                                                                                 </td>
                                                                                 <td className="px-2 py-2 whitespace-nowrap">
                                                                                     <input
-                                                                                        type="text"
+                                                                                        type="numeric"
                                                                                         className="gov-input border-0 bg-transparent focus:ring-0 focus:border-b-2 p-0 text-right"
                                                                                         value={detailRow.input2}
                                                                                         onChange={(e) => handleInputChange(
@@ -544,7 +588,7 @@ export default function FormTab2({ form1Data, entryId }: FormTab2Props) {
                                 type="submit"
                                 className="gov-btn px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded"
                             >
-                                {labels.save}
+                                {isNewEntryForBureaux ? labels.save : labels.update}
                             </button>
                         </div>
                     </form>

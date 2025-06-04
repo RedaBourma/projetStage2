@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using projetStage.Server.Dtos;
 using projetStage.Server.Models;
 using System.Security.Claims;
 
@@ -67,7 +68,7 @@ namespace projetStage.Server.Controllers
 
 
         [HttpGet("entries")]
-        public async Task<IActionResult> GetDashboardEntriesForCurrentUser()
+            public async Task<IActionResult> GetDashboardEntriesForCurrentUser()
         {
 
             var userIdClaim = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier);
@@ -166,20 +167,23 @@ namespace projetStage.Server.Controllers
             return Ok(dashboardDto);
         }
 
+        [HttpGet("getBureauxListes/{entryId}")]
+        public async Task<IActionResult> GetBureauxListes(string entryId)
+        {
+            var userIdClaim = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int currentUserId))
+            {
+                return Unauthorized("User ID not found in token for bureaux and listes retrieval.");
+            }
+            var entry = await context.DashboardEntries
+                .FirstOrDefaultAsync(de => de.entryId == entryId && de.UserId == currentUserId);
+            if (entry == null)
+            {
+                return NotFound("Dashboard entry not found or does not belong to the current user.");
+            }
+            return Ok(new {entry.NombreBureaux, entry.NombreListes});
+        }
+
     }
     
-    public class DashboardDto
-    {
-        public int? Id { get; set; }
-        public string? EntryId { get; set; }
-        public int PrefectureId { get; set; }
-        public string? PrefectureName { get; set; }
-        public int CirconscriptionId { get; set; }
-        public string? CirconscriptionName { get; set; }
-        public int NombreSieges { get; set; }
-        public int NombreBureaux { get; set; }
-        public int NombreListes { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime? UpdatedAt { get; set; }
-    }
 }

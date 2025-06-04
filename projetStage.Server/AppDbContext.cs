@@ -13,7 +13,9 @@ namespace projetStage.Server
         public DbSet<Prefecture> Prefectures { get; set; }
         public DbSet<Circonscription> Circonscriptions { get; set; }
 
-
+        public DbSet<Bureaux> Bureaux { get; set; }
+        public DbSet<Listes> Listes { get; set; }
+        public DbSet<Partis> Partis { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<DashboardEntry>()
