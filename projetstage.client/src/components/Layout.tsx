@@ -289,7 +289,7 @@ export default function Layout() {
         {/* Form 3 */}
         {activeTab === 3 && (
           <FormTab3
-            form1Data={form1Data}
+            // form1Data={form1Data}
             onNewEntry={() => {
               // setIsCreating(false);
               setActiveTab(0);

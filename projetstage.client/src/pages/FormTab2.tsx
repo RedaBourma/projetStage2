@@ -44,10 +44,12 @@ interface ListeDto {
     parti?: PartisDto
 }
 
+
 interface BereauDetailsDto {
     id: number;
     name?: string;
-    dashboardEntryId?: number
+    dashboardEntryId?: number;
+    nombreSieges: number | null | undefined;
     listes: ListeDto[];
 }
 
@@ -157,7 +159,12 @@ export default function FormTab2({ form1Data, entryId }: FormTab2Props) {
             console.log("first element id of data: " + data[0].id)
             setPartieSelect(data)
         }catch(error: any) {
-
+            console.error("Error fetching Partis:", error);
+            toast({
+                title: "Error",
+                description: `Failed to load Partis: ${error.message}`,
+                variant: "destructive",
+            });
         }
     }
 
@@ -343,6 +350,7 @@ export default function FormTab2({ form1Data, entryId }: FormTab2Props) {
                 // id: listRow.selec, // Will be undefined for new lists
                 pnAgentListe: listRow.input1,
                 parti: {id:parseInt(listRow.select)},
+                numListe: listRow.input2 
             }))
         }));
 

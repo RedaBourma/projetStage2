@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useToast } from "@/hooks/use-toast"; // Assuming you have shadcn/ui toast
+import { useAuth } from "@/App"; // Import the auth context
+
 
 interface FormTab3Props {
-    form1Data?: any | null; // Data from Form 1, if needed
+    // form1Data?: any | null; // Data from Form 1, if needed - RE-ADDED THIS PROP
     onNewEntry: () => void; // Callback for new entry logic
     entryId: string | null; // Unique entry ID from parent
 }
@@ -10,18 +13,18 @@ const LABELS = {
     title: "إنتخاب أعضاء مجلس النواب",
     subtitle1: "إقتراع يوم الأربعاء 08 شتنبر 2021",
     subtitle2: "الإنتخابات على مستوى الدوائر الإنتخابية المحلية",
-        choose: "اختر عنصرا:",
-        choosePlaceholder: "اختر",
+    choose: "اختر عنصرا:",
+    choosePlaceholder: "اختر",
     fieldX: "عدد المسجلين",
     fieldY: "عدد المصوتين",
     fieldZ: "عدد الأوراق الملغاة",
     fieldW: "عدد الأصوات المعبر عنها",
     calcError: "يجب أن تساوي قيمة عدد المسجلين مجموع قيم عدد المصوتين, عدد الأوراق الملغاة, عدد الأصوات المعبر عنها",
-        resultFieldLabel: "الحقل المخصص للنتائج:",
-        resultFieldValue: "عدد النتائج النهائية",
-        calcButton: "احسب النتائج",
+    resultFieldLabel: "الحقل المخصص للنتائج:",
+    resultFieldValue: "عدد النتائج النهائية",
+    calcButton: "احسب النتائج",
     createDashboardEntry: "أضف إلى لوحة المعلومات",
-        tableHeaders: [
+    tableHeaders: [
         "النتائج النهائية",
         "عدد المقاعد حسب قاعدة أكبر البقايا",
         "بقايا الأصوات",
@@ -30,53 +33,219 @@ const LABELS = {
         "الإنتماء السياسي",
         "الإسم الشخصي و العائلي لوكيل اللائحة",
         "رقم اللائحة"
-        ],
-        tableDash: "-",
+    ],
+    tableDash: "-",
+    summaryLab: {
+        per: "العمالة أو الإقليم :",
+        cir: "الدائرة الانتخابية :",
+        selected: "عدد المقاعد :" // NEW LABEL FOR THE THIRD ITEM
+    }
+
 };
 
-// Mock dropdown data - replace with backend data when integrating
-const MOCK_MAIN_DROPDOWN = ["عنصر ١", "عنصر ٢", "عنصر ٣"];
+interface Summary {
+    prefecture: string,
+    Circonscription: string
+    dropDown: BureauxSelected
+}
 
-export default function FormTab3({ form1Data, onNewEntry, entryId }: FormTab3Props) {
-    // entryId is available here for backend submission
-    console.log("FormTab3 entryId:", entryId); // Temporary: to acknowledge usage
-    const [selectedItem, setSelectedItem] = useState("");
+interface PartisDto {
+    id: number;
+    name: string;
+}
+
+interface ListeDto {
+    Id: number;
+    pnAgentListe?: string;
+    numListe: number;
+    numVotes?: string;
+    parti?: PartisDto
+}
+
+interface BureauxDto {
+    id: number;
+    name?: string;
+    dashboardEntryId?: number
+    nombreSieges?: number;
+    listes: ListeDto[];
+}
+
+interface BureauxSelected {
+    bureauxId: number,
+    nombreSieges: number
+}
+
+interface BureauxdropdownStructure {
+    key: number,
+    value: string
+}
+
+// Mock dropdown data - replace with backend data when integrating
+// const MOCK_MAIN_DROPDOWN = ["عنصر ١", "عنصر ٢", "عنصر ٣"];
+
+export default function FormTab3({ onNewEntry, entryId }: FormTab3Props) { // Re-added form1Data to props
+    const { toast } = useToast();
+    const { logout } = useAuth(); // Assuming useAuth is from App.tsx
+
+    console.log("FormTab3 entryId:", entryId);
     const [X, setX] = useState("");
     const [Y, setY] = useState("");
     const [Z, setZ] = useState("");
     const [W, setW] = useState("");
+    const [n, setN] = useState({
+        id: 0,
+        value: 0,
+    })
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
- 
+    const [selectedItem, setSelectedItem] = useState<number | undefined>(undefined);
+    // const [selectedItem, setSelectedItem] = useState<BureauxSelected>({
+    //     bureauxId:0,
+    //     nombreSieges: 0
+    // }); 
+    // State for the dropdown selection
+    const [bureauxdropdown, setBureauxDropdown] = useState<BureauxdropdownStructure[]>([{key:0, value:""}]);
+    const [bureaux, setBureaux] = useState<BureauxDto[]>([]);
+    const [listes, setListes] = useState<ListeDto[]>([]);
+    const [initData, setInitData] = useState<Summary>({
+        prefecture: "اسم العمالة/الإقليم", // Initial placeholder
+        Circonscription: "اسم الدائرة الانتخابية", // Initial placeholder
+        dropDown: {
+            bureauxId: 0,
+            nombreSieges: 0
+        }
+    });
+
+    useEffect(() => {
+        const fetchBureaux = async () => {
+            if(!entryId) {
+                logout();
+                return;
+            }
+
+            const token = localStorage.getItem("auth_token");
+            if(!token){
+                toast({
+                    title: "Authentication Required",
+                    description: "Please log in to view prefectures.",
+                    variant: "destructive",
+                });
+                logout();
+                return;
+            }
+
+            try {
+                const response = await fetch(`api/Bureaux/getAllBureauxEntry/${entryId}`, {
+                    method: "GET",
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                    }
+                });
+
+                if(!response.ok){
+                    const errorDetail = await response.text();
+                    if(response.status == 401) {logout(); return;}
+                    throw new Error(`failed to  fetch bureaux: ${response.status} - ${errorDetail}`)
+                }
+                const data: BureauxDto[] = await response.json();
+
+                setBureaux(data);
+                const dropdownData : BureauxdropdownStructure[] = data.map(item => ({
+                    key: item.id,
+                    value: item.name ?? '',
+                }))
+                setBureauxDropdown(dropdownData)
+
+                console.table(data);
+
+            }catch(error: any){
+            console.error("Error fetching Bureaux:", error);
+            toast({
+                title: "Error",
+                description: `Failed to load Bureaux: ${error.message}`,
+                variant: "destructive",
+            });
+            }
+        }
+
+        fetchBureaux()
+    }, [])
+
+    let selectedBureau = bureaux.find(b => b.id === selectedItem)
+    useEffect(() => {
+        selectedBureau = bureaux.find(b => b.id === selectedItem)
+
+        const lis : ListeDto[] = selectedBureau?.listes ?? [];
+
+        setListes(lis);
+    }, [selectedItem])
+
+    
 
     // Table sample data
-    const MOCK_TABLE_ROWS = [
-        { readA: "قيمة ١", readB: "قيمة ٢", readC: "قيمة ٣" },
-        { readA: "قيمة ٤", readB: "قيمة ٥", readC: "قيمة ٦" },
-    ];
+    // const MOCK_TABLE_ROWS = [
+    //     { readA: "قيمة ١", readB: "قيمة ٢", readC: "قيمة ٣" },
+    //     { readA: "قيمة ٤", readB: "قيمة ٥", readC: "قيمة ٦" },
+    // ];
 
     const handleCalc = () => {
-        if (+X !== +Y + +Z + +W) {
+        // Convert to numbers for calculation, handle potential empty strings as 0
+        const numX = Number(X || 0);
+        const numY = Number(Y || 0);
+        const numZ = Number(Z || 0);
+        const numW = Number(W || 0);
+
+        if (numX !== numY + numZ + numW) {
             setError(LABELS.calcError);
+            toast({
+                title: "خطأ في الحساب",
+                description: LABELS.calcError,
+                variant: "destructive"
+            });
             return;
         }
         setError("");
         setSuccess("تم الحساب بنجاح");
+        toast({
+            title: "نجاح",
+            description: "تم الحساب بنجاح",
+            variant: "default"
+        });
         setTimeout(() => setSuccess(""), 3000);
     };
 
-    const handleCreateDashboardEntry = () => {
-        // Validate required fields
-        if (!selectedItem || !X || !Y || !Z || !W) {
-            setError("يرجى ملء جميع الحقول أولاً");
-            return;
-        }
-        
-        setError("");
- 
-        setSuccess("تم إنشاء السجل بنجاح");
-        setTimeout(() => setSuccess(""), 3000);
-        if (onNewEntry) onNewEntry();
+    // const handleCreateDashboardEntry = () => {
+    //     // Validate required fields
+    //     if (!selectedItem || !X || !Y || !Z || !W) {
+    //         const errorMessage = "يرجى ملء جميع الحقول أولاً";
+    //         setError(errorMessage);
+    //         toast({
+    //             title: "خطأ في الإدخال",
+    //             description: errorMessage,
+    //             variant: "destructive"
+    //         });
+    //         return;
+    //     }
+
+    //     setError("");
+
+    //     setSuccess("تم إنشاء السجل بنجاح");
+    //     toast({
+    //         title: "نجاح",
+    //         description: "تم إنشاء السجل بنجاح",
+    //         variant: "default"
+    //     });
+    //     setTimeout(() => setSuccess(""), 3000);
+    //     if (onNewEntry) onNewEntry(); // This should likely trigger a navigation or refresh
+    // };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const val = e.target.value;
+    if (val === "" || (/^\d+$/.test(val) && Number(val) >= 1)) {
+        const updated = [...listes];
+        updated[index].numVotes = val.replace(/^0+/, "");
+        setListes(updated);
+    }
     };
 
     return (
@@ -89,63 +258,105 @@ export default function FormTab3({ form1Data, onNewEntry, entryId }: FormTab3Pro
                         <div className="text-md text-blue-800">{LABELS.subtitle2}</div>
                     </div>
 
-            {/* Summary Rectangle */}
-                    <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-100 text-right">
-                {form1Data ? (
-                    <span className="mx-2">
-                        {form1Data.dropdown1} • {form1Data.dropdown2} •
-                                <span className="font-medium">القيم: {form1Data.num1}, {form1Data.num2}, {form1Data.num3}</span>
-                    </span>
-                ) : (
-                    "—"
-                )}
-            </div>
+                    {/* Summary Rectangle - ENHANCED DESIGN */}
+                    <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-100 text-right flex flex-col  grid grid-cols-1 md:grid-cols-4 gap-4 rtl gap-2">
+                        {
+                            <>
+                                <div className="flex items-center gap-2 text-lg">
+                                    <span className="font-semibold">{LABELS.summaryLab.per}</span>
+                                    <span className="text-blue-800 font-bold">{"dsafas"}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-lg">
+                                    <span className="font-semibold">{LABELS.summaryLab.cir}</span>
+                                    <span className="text-blue-800 font-bold">{"dafsafdf"}</span>
+                                </div>
+                                {/* New conditional display for selected item */}
+ 
+                                {selectedItem && (
+                                    <div className="flex items-center gap-2 text-lg">
+                                        <span className="font-semibold">{LABELS.summaryLab.selected}</span>
+                                        <span className="text-blue-800 font-bold">{selectedBureau?.nombreSieges}</span>
+                                    </div>
+                                )}
+                                {/* <div className="text-base font-medium text-gray-700 mt-2">
+                                    القيم العددية: {"dsafas"}, {"dsaf"}, {"sdfsdafsad"}
+                                </div> */}
+                            </>
+                        }
+                    </div>
+
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            {/* Main dropdown selection */}
+                        {/* Main dropdown selection */}
                         <div>
                             <label className="gov-label">{LABELS.choose}</label>
-                <select
+                            <select
                                 className="gov-select"
-                    value={selectedItem}
-                    onChange={e => setSelectedItem(e.target.value)}
-                >
+                                value={selectedItem}
+                                onChange={e => {setSelectedItem(Number(e.target.value));
+                                    
+                                    console.log(selectedItem);
+                                }}
+                            >
                                 <option value="">{LABELS.choosePlaceholder}</option>
-                                {MOCK_MAIN_DROPDOWN.map(opt => <option key={opt}>{opt}</option>)}
-                </select>
+                                {bureauxdropdown.map((item) => <option key={item.key} value={item.key}>{item.value}</option>)}
+                            </select>
                         </div>
-            </div>
+                    </div>
 
-            {/* Input rectangle */}
+                    {/* Input rectangle */}
                     <div className="mb-6 p-5 bg-green-50 rounded-lg border border-green-100">
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 rtl">
                             <div>
                                 <label className="gov-label">{LABELS.fieldX}</label>
-                    <input className="gov-input" type="number" value={X}
-                                    onChange={e => setX(e.target.value.replace(/^0+/, ""))} 
-                                    placeholder="أدخل قيمة" />
-                </div>
-                            <div>
-                                <label className="gov-label">{LABELS.fieldY}</label>
-                    <input className="gov-input" type="number" value={Y}
-                                    onChange={e => setY(e.target.value.replace(/^0+/, ""))} 
-                                    placeholder="أدخل قيمة" />
-                </div>
-                            <div>
-                                <label className="gov-label">{LABELS.fieldZ}</label>
-                    <input className="gov-input" type="number" value={Z}
-                                    onChange={e => setZ(e.target.value.replace(/^0+/, ""))} 
-                                    placeholder="أدخل قيمة" />
-                </div>
-                            <div>
-                                <label className="gov-label">{LABELS.fieldW}</label>
-                    <input className="gov-input" type="number" value={W}
-                                    onChange={e => setW(e.target.value.replace(/^0+/, ""))} 
+                                <input className="gov-input" type="number" min={1} step={1} value={X}
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        if (val === "" || (/^\d+$/.test(val) && Number(val) >= 1)){
+                                            setX(val.replace(/^0+/, ""));
+                                        }
+                                    }}
                                     placeholder="أدخل قيمة" />
                             </div>
-                </div>
-            </div>
-                    
+                            <div>
+                                <label className="gov-label">{LABELS.fieldY}</label>
+                                <input className="gov-input" type="number" min={1} step={1} value={Y}
+                                    onChange={e => {
+
+                                        const val = e.target.value;
+                                        if (val === "" || (/^\d+$/.test(val) && Number(val) >= 1)){
+                                            setY(val.replace(/^0+/, ""));
+                                        }
+                                    }}
+                                    placeholder="أدخل قيمة" />
+                            </div>
+                            <div>
+                                <label className="gov-label">{LABELS.fieldZ}</label>
+                                <input className="gov-input" type="number" min={1} step={1} value={Z}
+                                    onChange={e => {
+
+                                        const val = e.target.value;
+                                        if (val === "" || (/^\d+$/.test(val) && Number(val) >= 1)){
+                                            setZ(val.replace(/^0+/, ""));
+                                        }
+                                    }}
+                                    placeholder="أدخل قيمة" />
+                            </div>
+                            <div>
+                                <label className="gov-label">{LABELS.fieldW}</label>
+                                <input className="gov-input" type="number" min={1} step={1} value={W}
+                                    onChange={e => {
+
+                                        const val = e.target.value;
+                                        if (val === "" || (/^\d+$/.test(val) && Number(val) >= 1)){
+                                            setW(val.replace(/^0+/, ""));
+                                        }
+                                    }}
+                                    placeholder="أدخل قيمة" />
+                            </div>
+                        </div>
+                    </div>
+
                     {error && (
                         <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded text-center">
                             {error}
@@ -160,54 +371,56 @@ export default function FormTab3({ form1Data, onNewEntry, entryId }: FormTab3Pro
 
                     {/* Actions buttons */}
                     <div className="flex flex-wrap justify-center gap-4 mb-8">
-                        <button 
-                            className="gov-btn bg-green-600 hover:bg-green-700 text-white px-6 py-2" 
+                        {/* <button
+                            className="gov-btn bg-green-600 hover:bg-green-700 text-white px-6 py-2"
                             onClick={handleCreateDashboardEntry}
                         >
                             {LABELS.createDashboardEntry}
-                        </button>
-                        
-                        <button 
-                            className="gov-btn px-6 py-2" 
+                        </button> */}
+
+                        <button
+                            className="gov-btn px-6 py-2"
                             onClick={handleCalc}
                         >
                             {LABELS.calcButton}
-                </button>
-                        
+                        </button>
+
                         <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-lg">
                             <span className="text-md font-medium">{LABELS.resultFieldLabel}</span>
                             <span className="text-blue-600 font-bold">{LABELS.resultFieldValue}</span>
                         </div>
-            </div>
+                    </div>
 
-            {/* Excel-style table - RTL order */}
+                    {/* Excel-style table - RTL order */}
                     <div className="mt-8 border border-gray-200 rounded-lg overflow-hidden">
                         <h3 className="text-lg font-semibold p-3 bg-gray-50 border-b">جدول النتائج</h3>
                         <div className="overflow-x-auto">
                             <table className="w-full border-collapse excel-table rtl-table text-base">
                                 <thead className="bg-gray-100">
                                     <tr className="bg-gray-100">
-                                        {LABELS.tableHeaders.map((head, i) => (
+                                        {/* Reverse the header order */}
+                                        {LABELS.tableHeaders.slice().reverse().map((head, i) => (
                                             <th key={i} className="border border-gray-300 p-2 text-base">{head}</th>
                                         ))}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {MOCK_TABLE_ROWS.map((row, idx) => (
-                                        <tr key={idx} className="hover:bg-blue-50">
-                                            <td className="border border-gray-300 p-2 text-base">{row.readC}</td>
-                                            <td className="border border-gray-300 p-2 text-base">{row.readB}</td>
-                                            <td className="border border-gray-300 p-2 text-base">{row.readA}</td>
-                                            <td className="border border-gray-300 p-2 text-base">{LABELS.tableDash}</td>
-                                            <td className="border border-gray-300 p-2"><input type="text" className="text-base w-full" /></td>
-                                            <td className="border border-gray-300 p-2 text-base">{LABELS.tableDash}</td>
-                                            <td className="border border-gray-300 p-2 text-base">{LABELS.tableDash}</td>
-                                            <td className="border border-gray-300 p-2 text-base">{LABELS.tableDash}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {listes?.map((item, index) => (
+                                        <tr key={item.numListe} className="hover:bg-blue-50">
+                                            {/* Ensure no whitespace between <td> tags */}
+                                            <td className="border border-gray-300 p-2 text-base">{item.numListe}</td>
+                                            <td className="border border-gray-300 p-2 text-base">{item.pnAgentListe}</td>
+                                            <td className="border border-gray-300 p-2 text-base">{item.parti?.name}</td>
+                                            <td className="border border-gray-300 p-2"><input type="number" min={1} step={1} onChange={(e) => handleInputChange(e, index)} className="text-base w-full" /></td>
+                                            <td className="border border-gray-300 p-2 text-base">{}</td>
+                                            <td className="border border-gray-300 p-2 text-base">{}</td>
+                                            <td className="border border-gray-300 p-2 text-base">{}</td>
+                                            <td className="border border-gray-300 p-2 text-base">{}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>

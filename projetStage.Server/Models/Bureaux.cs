@@ -11,7 +11,7 @@ namespace projetStage.Server.Models
         [Column(TypeName = "nvarchar(255)")]
         public string? Name { get; set; }
         public int DashboardEntryId { get; set; }
-        public DashboardEntry DashboardEntry { get; set; }
+        public DashboardEntry? DashboardEntry { get; set; }
         public ICollection<Listes> Listes { get; set; } = new List<Listes>();
     }
 }
