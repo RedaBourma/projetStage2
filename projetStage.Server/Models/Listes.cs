@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace projetStage.Server.Models
 {
@@ -14,8 +15,8 @@ namespace projetStage.Server.Models
 
         [Column(TypeName = "nvarchar(255)")]
         public string? PnAgentListe { get; set; }
-
         public int NumListe { get; set; }
+        public int? numVotes { get; set; }
 
     }
 }

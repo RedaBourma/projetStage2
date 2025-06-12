@@ -31,7 +31,7 @@ const COLUMNS = [
   "عدد المكاتب المركزية",
   "عدد اللوائح",
   "تعديل",
-  "طباعة"
+  // "طباعة"
 ];
 
 export default function DashboardTab({
@@ -223,7 +223,7 @@ export default function DashboardTab({
                         تعديل
                       </button>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    {/* <td className="px-6 py-4 whitespace-nowrap">
                       <button
                         className="text-green-600 hover:text-green-900 bg-green-50 hover:bg-green-100 px-3 py-1 rounded-md transition-colors"
                         onClick={() => {
@@ -233,7 +233,7 @@ export default function DashboardTab({
                       >
                         طباعة
                       </button>
-                    </td>
+                    </td> */}
                   </tr>
                 ))
               )}

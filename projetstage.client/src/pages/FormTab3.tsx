@@ -13,13 +13,14 @@ const LABELS = {
     title: "إنتخاب أعضاء مجلس النواب",
     subtitle1: "إقتراع يوم الأربعاء 08 شتنبر 2021",
     subtitle2: "الإنتخابات على مستوى الدوائر الإنتخابية المحلية",
-    choose: "اختر عنصرا:",
+    choose: "اسم المكتب المركزي :",
     choosePlaceholder: "اختر",
     fieldX: "عدد المسجلين",
     fieldY: "عدد المصوتين",
     fieldZ: "عدد الأوراق الملغاة",
     fieldW: "عدد الأصوات المعبر عنها",
-    calcError: "يجب أن تساوي قيمة عدد المسجلين مجموع قيم عدد المصوتين, عدد الأوراق الملغاة, عدد الأصوات المعبر عنها",
+    calcError1: "يجب أن تساوي قيمة عدد المسجلين مجموع قيم عدد المصوتين, عدد الأوراق الملغاة, عدد الأصوات المعبر عنها",
+    calcError2: "",
     resultFieldLabel: "الحقل المخصص للنتائج:",
     resultFieldValue: "عدد النتائج النهائية",
     calcButton: "احسب النتائج",
@@ -80,6 +81,11 @@ interface BureauxdropdownStructure {
     value: string
 }
 
+interface ResultatsDto {
+    
+}
+
+
 // Mock dropdown data - replace with backend data when integrating
 // const MOCK_MAIN_DROPDOWN = ["عنصر ١", "عنصر ٢", "عنصر ٣"];
 
@@ -108,13 +114,14 @@ export default function FormTab3({ onNewEntry, entryId }: FormTab3Props) { // Re
     const [bureaux, setBureaux] = useState<BureauxDto[]>([]);
     const [listes, setListes] = useState<ListeDto[]>([]);
     const [initData, setInitData] = useState<Summary>({
-        prefecture: "اسم العمالة/الإقليم", // Initial placeholder
-        Circonscription: "اسم الدائرة الانتخابية", // Initial placeholder
+        prefecture: "اسم العمالة/الإقليم", 
+        Circonscription: "اسم الدائرة الانتخابية", 
         dropDown: {
             bureauxId: 0,
             nombreSieges: 0
         }
     });
+    const [clicked, setClicked] = useState<boolean>(false);
 
     useEffect(() => {
         const fetchBureaux = async () => {
@@ -195,16 +202,29 @@ export default function FormTab3({ onNewEntry, entryId }: FormTab3Props) { // Re
         const numZ = Number(Z || 0);
         const numW = Number(W || 0);
 
-        if (numX !== numY + numZ + numW) {
-            setError(LABELS.calcError);
+        if (numX !== numY + numZ + numW 
+            || X === "" || Y === "" || Z === "" || W === "") {
+            setError(LABELS.calcError1);
             toast({
                 title: "خطأ في الحساب",
-                description: LABELS.calcError,
+                description: LABELS.calcError1,
                 variant: "destructive"
             });
             return;
         }
+
+        if(listes.some(item => !item.numVotes || item.numVotes.trim() === "")){
+            setError(LABELS.calcError2)
+            toast({
+                title: "خطأ في الحساب",
+                description: LABELS.calcError2,
+                variant: "destructive"
+            });
+            return;
+        }
+   
         setError("");
+        setClicked(true);
         setSuccess("تم الحساب بنجاح");
         toast({
             title: "نجاح",
@@ -214,38 +234,15 @@ export default function FormTab3({ onNewEntry, entryId }: FormTab3Props) { // Re
         setTimeout(() => setSuccess(""), 3000);
     };
 
-    // const handleCreateDashboardEntry = () => {
-    //     // Validate required fields
-    //     if (!selectedItem || !X || !Y || !Z || !W) {
-    //         const errorMessage = "يرجى ملء جميع الحقول أولاً";
-    //         setError(errorMessage);
-    //         toast({
-    //             title: "خطأ في الإدخال",
-    //             description: errorMessage,
-    //             variant: "destructive"
-    //         });
-    //         return;
-    //     }
-
-    //     setError("");
-
-    //     setSuccess("تم إنشاء السجل بنجاح");
-    //     toast({
-    //         title: "نجاح",
-    //         description: "تم إنشاء السجل بنجاح",
-    //         variant: "default"
-    //     });
-    //     setTimeout(() => setSuccess(""), 3000);
-    //     if (onNewEntry) onNewEntry(); // This should likely trigger a navigation or refresh
-    // };
-
+ 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
-    const val = e.target.value;
-    if (val === "" || (/^\d+$/.test(val) && Number(val) >= 1)) {
-        const updated = [...listes];
-        updated[index].numVotes = val.replace(/^0+/, "");
-        setListes(updated);
-    }
+        const val = e.target.value;
+        if (val === "" || (/^\d+$/.test(val) && Number(val) >= 1)) {
+            const updated = [...listes];
+            updated[index].numVotes = val.replace(/^0+/, "");
+            setListes(updated);
+        }
+        setClicked(false);
     };
 
     return (
@@ -257,7 +254,13 @@ export default function FormTab3({ onNewEntry, entryId }: FormTab3Props) { // Re
                         <div className="text-lg text-gray-700">{LABELS.subtitle1}</div>
                         <div className="text-md text-blue-800">{LABELS.subtitle2}</div>
                     </div>
-
+                    <div>
+                        {clicked ? (
+                            <p>true</p>
+                        ): (
+                            <p>false</p>
+                        )}
+                    </div>
                     {/* Summary Rectangle - ENHANCED DESIGN */}
                     <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-100 text-right flex flex-col  grid grid-cols-1 md:grid-cols-4 gap-4 rtl gap-2">
                         {
@@ -294,7 +297,7 @@ export default function FormTab3({ onNewEntry, entryId }: FormTab3Props) { // Re
                                 className="gov-select"
                                 value={selectedItem}
                                 onChange={e => {setSelectedItem(Number(e.target.value));
-                                    
+                                    setClicked(false);
                                     console.log(selectedItem);
                                 }}
                             >
@@ -309,41 +312,59 @@ export default function FormTab3({ onNewEntry, entryId }: FormTab3Props) { // Re
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 rtl">
                             <div>
                                 <label className="gov-label">{LABELS.fieldX}</label>
-                                <input className="gov-input" type="number" min={1} step={1} value={X}
-                                    onChange={e => {
-                                        const val = e.target.value;
-                                        if (val === "" || (/^\d+$/.test(val) && Number(val) >= 1)){
-                                            setX(val.replace(/^0+/, ""));
-                                        }
-                                    }}
-                                    placeholder="أدخل قيمة" />
+                                {clicked? (
+                                    <span className="text-base">{X}</span>
+                                ) : (
+                                    <input className="gov-input" type="number" min={1} step={1} value={X}
+                                        onChange={e => {
+                                            const val = e.target.value;
+                                            if (val === "" || (/^\d+$/.test(val) && Number(val) >= 1)){
+                                                setX(val.replace(/^0+/, ""));
+                                            }
+                                            setClicked(false);
+                                        }}
+                                        placeholder="أدخل قيمة" />
+                                )}
                             </div>
                             <div>
                                 <label className="gov-label">{LABELS.fieldY}</label>
-                                <input className="gov-input" type="number" min={1} step={1} value={Y}
-                                    onChange={e => {
+                                {clicked? (
+                                    <span className="text-base">{Y}</span>
+                                ) : (
+                                    <input className="gov-input" type="number" min={1} step={1} value={Y}
+                                        onChange={e => {
 
-                                        const val = e.target.value;
-                                        if (val === "" || (/^\d+$/.test(val) && Number(val) >= 1)){
-                                            setY(val.replace(/^0+/, ""));
-                                        }
-                                    }}
-                                    placeholder="أدخل قيمة" />
+                                            const val = e.target.value;
+                                            if (val === "" || (/^\d+$/.test(val) && Number(val) >= 1)){
+                                                setY(val.replace(/^0+/, ""));
+                                            }
+                                            setClicked(false);
+                                        }}
+                                        placeholder="أدخل قيمة" />
+                                )}
                             </div>
                             <div>
                                 <label className="gov-label">{LABELS.fieldZ}</label>
-                                <input className="gov-input" type="number" min={1} step={1} value={Z}
-                                    onChange={e => {
+                                {clicked? (
+                                    <span className="text-base">{Z}</span>
+                                ) : (
+                                    <input className="gov-input" type="number" min={1} step={1} value={Z}
+                                        onChange={e => {
 
-                                        const val = e.target.value;
-                                        if (val === "" || (/^\d+$/.test(val) && Number(val) >= 1)){
-                                            setZ(val.replace(/^0+/, ""));
-                                        }
-                                    }}
-                                    placeholder="أدخل قيمة" />
+                                            const val = e.target.value;
+                                            if (val === "" || (/^\d+$/.test(val) && Number(val) >= 1)){
+                                                setZ(val.replace(/^0+/, ""));
+                                            }
+                                            setClicked(false);
+                                        }}
+                                        placeholder="أدخل قيمة" />
+                                )}
                             </div>
                             <div>
                                 <label className="gov-label">{LABELS.fieldW}</label>
+                                {clicked? (
+                                    <span className="text-base">{W}</span>
+                                ) : (
                                 <input className="gov-input" type="number" min={1} step={1} value={W}
                                     onChange={e => {
 
@@ -351,8 +372,10 @@ export default function FormTab3({ onNewEntry, entryId }: FormTab3Props) { // Re
                                         if (val === "" || (/^\d+$/.test(val) && Number(val) >= 1)){
                                             setW(val.replace(/^0+/, ""));
                                         }
+                                        setClicked(false);
                                     }}
                                     placeholder="أدخل قيمة" />
+                                )}
                             </div>
                         </div>
                     </div>
@@ -385,10 +408,11 @@ export default function FormTab3({ onNewEntry, entryId }: FormTab3Props) { // Re
                             {LABELS.calcButton}
                         </button>
 
-                        <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-lg">
+                        {/* <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-lg">
                             <span className="text-md font-medium">{LABELS.resultFieldLabel}</span>
                             <span className="text-blue-600 font-bold">{LABELS.resultFieldValue}</span>
-                        </div>
+                        </div> */}
+
                     </div>
 
                     {/* Excel-style table - RTL order */}
@@ -411,8 +435,18 @@ export default function FormTab3({ onNewEntry, entryId }: FormTab3Props) { // Re
                                             <td className="border border-gray-300 p-2 text-base">{item.numListe}</td>
                                             <td className="border border-gray-300 p-2 text-base">{item.pnAgentListe}</td>
                                             <td className="border border-gray-300 p-2 text-base">{item.parti?.name}</td>
-                                            <td className="border border-gray-300 p-2"><input type="number" min={1} step={1} onChange={(e) => handleInputChange(e, index)} className="text-base w-full" /></td>
-                                            <td className="border border-gray-300 p-2 text-base">{}</td>
+                                            <td className="border border-gray-300 p-2">
+                                                {clicked? (
+                                                    <span className="text-base">{item.numVotes}</span>
+                                                ): (
+                                                    <input type="number" min={1} step={1} onChange={(e) => handleInputChange(e, index)} className="text-base w-full" 
+                                                    placeholder="أدخل قيمة"
+                                                    />
+                                                )}
+                                            </td>
+                                            <td className="border border-gray-300 p-2 text-base">{
+                                                
+                                            }</td>
                                             <td className="border border-gray-300 p-2 text-base">{}</td>
                                             <td className="border border-gray-300 p-2 text-base">{}</td>
                                             <td className="border border-gray-300 p-2 text-base">{}</td>

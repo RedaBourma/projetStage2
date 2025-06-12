@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using projetStage.Server;
 
@@ -11,9 +12,11 @@ using projetStage.Server;
 namespace projetStage.Server.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250611133601_AddNumVotesToListesTable")]
+    partial class AddNumVotesToListesTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -178,47 +181,6 @@ namespace projetStage.Server.Migrations
                     b.ToTable("Prefectures");
                 });
 
-            modelBuilder.Entity("projetStage.Server.Models.Resultats", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("BureauId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("ListeId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("bureauxId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("listesId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("numBulletsNuls")
-                        .HasColumnType("int");
-
-                    b.Property<int>("numElecteurs")
-                        .HasColumnType("int");
-
-                    b.Property<int>("numInscrits")
-                        .HasColumnType("int");
-
-                    b.Property<int>("numVotesExprimes")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("bureauxId");
-
-                    b.HasIndex("listesId");
-
-                    b.ToTable("Resultats");
-                });
-
             modelBuilder.Entity("projetStage.Server.Models.User", b =>
                 {
                     b.Property<int>("Id")
@@ -315,26 +277,9 @@ namespace projetStage.Server.Migrations
                     b.Navigation("Partis");
                 });
 
-            modelBuilder.Entity("projetStage.Server.Models.Resultats", b =>
-                {
-                    b.HasOne("projetStage.Server.Models.Bureaux", "bureaux")
-                        .WithMany("Resultats")
-                        .HasForeignKey("bureauxId");
-
-                    b.HasOne("projetStage.Server.Models.Listes", "listes")
-                        .WithMany("Resultats")
-                        .HasForeignKey("listesId");
-
-                    b.Navigation("bureaux");
-
-                    b.Navigation("listes");
-                });
-
             modelBuilder.Entity("projetStage.Server.Models.Bureaux", b =>
                 {
                     b.Navigation("Listes");
-
-                    b.Navigation("Resultats");
                 });
 
             modelBuilder.Entity("projetStage.Server.Models.Circonscription", b =>
@@ -345,11 +290,6 @@ namespace projetStage.Server.Migrations
             modelBuilder.Entity("projetStage.Server.Models.DashboardEntry", b =>
                 {
                     b.Navigation("Bureaux");
-                });
-
-            modelBuilder.Entity("projetStage.Server.Models.Listes", b =>
-                {
-                    b.Navigation("Resultats");
                 });
 
             modelBuilder.Entity("projetStage.Server.Models.Partis", b =>
