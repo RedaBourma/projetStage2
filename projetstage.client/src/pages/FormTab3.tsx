@@ -187,6 +187,13 @@ export default function FormTab3({ onNewEntry, entryId }: FormTab3Props) { // Re
         setListes(lis);
     }, [selectedItem])
 
+    const [kasim, setKasim] = useState<number>(0);
+    useEffect(() => {
+        if(!clicked || selectedBureau?.nombreSieges === undefined) return;
+
+       setKasim(Number(X)/ selectedBureau.nombreSieges);
+
+    },[clicked, selectedBureau])
     
 
     // Table sample data
@@ -415,6 +422,14 @@ export default function FormTab3({ onNewEntry, entryId }: FormTab3Props) { // Re
 
                     </div>
 
+                    { clicked ? (
+                        <div>
+                            <span className="text-base">{"القاسم الإنتخابي: "}{kasim}</span>
+                        </div>
+                    ): (
+                        <></>
+                    )}
+
                     {/* Excel-style table - RTL order */}
                     <div className="mt-8 border border-gray-200 rounded-lg overflow-hidden">
                         <h3 className="text-lg font-semibold p-3 bg-gray-50 border-b">جدول النتائج</h3>
@@ -445,11 +460,18 @@ export default function FormTab3({ onNewEntry, entryId }: FormTab3Props) { // Re
                                                 )}
                                             </td>
                                             <td className="border border-gray-300 p-2 text-base">{
-                                                
+                                                clicked? Math.floor(Number(item.numVotes) / kasim) : null
                                             }</td>
-                                            <td className="border border-gray-300 p-2 text-base">{}</td>
-                                            <td className="border border-gray-300 p-2 text-base">{}</td>
-                                            <td className="border border-gray-300 p-2 text-base">{}</td>
+                                            <td className="border border-gray-300 p-2 text-base">{
+                                                clicked? Number(item.numVotes) % kasim : null
+                                            
+                                            }</td>
+                                            <td className="border border-gray-300 p-2 text-base">{
+                                            
+                                            }</td>
+                                            <td className="border border-gray-300 p-2 text-base">{
+                                            
+                                            }</td>
                                         </tr>
                                     ))}
                                 </tbody>
