@@ -16,6 +16,7 @@ namespace projetStage.Server
         public DbSet<Bureaux> Bureaux { get; set; }
         public DbSet<Listes> Listes { get; set; }
         public DbSet<Partis> Partis { get; set; }
+        public DbSet<Resultats> Resultats { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -43,6 +44,22 @@ namespace projetStage.Server
                 .WithMany(p => p.Circonscriptions)
                 .HasForeignKey(c => c.PrefectureId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Resultats>()
+                .HasOne(r => r.Bureaux)
+                .WithMany(b => b.Resultats)
+                .HasForeignKey(r => r.BureauxId)
+                .OnDelete(DeleteBehavior.NoAction) // Or DeleteBehavior.Restrict
+                .IsRequired();
+
+            // Relationship: Resultats to Listes
+             modelBuilder.Entity<Resultats>()
+                .HasOne(r => r.Listes) // Note: your property name is 'Liste', but your snapshot used 'Listes' in navigation.
+                               // Make sure your navigation property in Resultats is 'Liste'.
+                .WithMany(l => l.Resultats)
+                .HasForeignKey(r => r.ListeId)
+                .OnDelete(DeleteBehavior.NoAction) // Or DeleteBehavior.Restrict
+                .IsRequired();
 
             modelBuilder.Entity<User>()
                 .HasIndex(u => u.Email)

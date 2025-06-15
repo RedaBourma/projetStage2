@@ -56,7 +56,7 @@ interface PartisDto {
 }
 
 interface ListeDto {
-    Id: number;
+    id?: number;
     pnAgentListe?: string;
     numListe: number;
     numVotes?: string;
@@ -64,7 +64,7 @@ interface ListeDto {
 }
 
 interface BureauxDto {
-    id: number;
+    id?: number;
     name?: string;
     dashboardEntryId?: number
     nombreSieges?: number;
@@ -82,7 +82,17 @@ interface BureauxdropdownStructure {
 }
 
 interface ResultatsDto {
-    
+    id?: number;
+    bureauxId?: number;
+    listeId?: number;
+    numInscrits: number;
+    numElecteurs: number;
+    numBullVoteNuls: number;
+    numVotesExprimes: number;
+}
+
+interface selectedBureauWithID extends BureauxDto {
+    id: number
 }
 
 
@@ -122,6 +132,7 @@ export default function FormTab3({ onNewEntry, entryId }: FormTab3Props) { // Re
         }
     });
     const [clicked, setClicked] = useState<boolean>(false);
+    const [shouldSave, setShouldSave] = useState(false);
 
     useEffect(() => {
         const fetchBureaux = async () => {
@@ -158,7 +169,7 @@ export default function FormTab3({ onNewEntry, entryId }: FormTab3Props) { // Re
 
                 setBureaux(data);
                 const dropdownData : BureauxdropdownStructure[] = data.map(item => ({
-                    key: item.id,
+                    key: item.id?? 0,
                     value: item.name ?? '',
                 }))
                 setBureauxDropdown(dropdownData)
@@ -178,13 +189,82 @@ export default function FormTab3({ onNewEntry, entryId }: FormTab3Props) { // Re
         fetchBureaux()
     }, [])
 
-    let selectedBureau = bureaux.find(b => b.id === selectedItem)
+    const [selectedBureau, setSelectdBureau] = useState<BureauxDto | undefined>(bureaux.find(b => b.id === selectedItem))
+    // let selectedBureau = bureaux.find(b => b.id === selectedItem)
     useEffect(() => {
-        selectedBureau = bureaux.find(b => b.id === selectedItem)
-
-        const lis : ListeDto[] = selectedBureau?.listes ?? [];
-
+        if (selectedItem === undefined) return;
+        console.log("New selectedItem:", selectedItem);
+        const bureau = bureaux.find(b => b.id === selectedItem);
+        setSelectdBureau(bureau);
+        const lis: ListeDto[] = bureau?.listes ?? [];
+        // const lis : ListeDto[] = selectedBureau?.listes ?? [];
         setListes(lis);
+
+        const fetchAndPopulateResultats = async (bureauId: number) => {
+            const token = localStorage.getItem("auth_token");
+            if (!token) {
+                toast({
+                    title: "Authentication Required",
+                    description: "Please log in to view results.",
+                    variant: "destructive",
+                });
+                logout();
+                return;
+            }
+
+            try {
+                const response = await fetch(`api/Resultats/GetResultats/${bureauId}`, {
+                    method: "GET",
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                    }
+                });
+
+                if(!response.ok){
+                    if(response.status === 404){
+                        console.log(`No resultats found for Bureaux ID ${bureauId}. Initializing inputs.`);
+                        setX('');setY('');setZ('');setW('');
+                        return;
+                    }
+                    const errorDetail = await response.text()
+                    if(response.status === 401) {logout(); return;}
+                    throw new Error(`Failed to fetch resultats: ${response.status} - ${errorDetail}`);
+
+                }
+                const data: ResultatsDto[] = await response.json();
+                console.log("hhhhhhhhhhhhhhhhhhhhhhhhhhh")
+                console.log( data[0].numElecteurs)
+                if(data.length > 0){
+                    const firstResult = data[0];
+                    setX(""+firstResult.numInscrits);
+                    setY(""+firstResult.numElecteurs);
+                    setZ(""+firstResult.numBullVoteNuls); 
+                    setW(""+firstResult.numVotesExprimes);
+                    setClicked(true);
+                    console.log(`Loaded existing results for Bureau ID ${bureauId}:`, firstResult);
+                }else{
+                    console.log(`API returned empty results for Bureau ID ${bureauId}. Initializing inputs.`);
+                    setX('');setY('');setZ('');setW('');
+                    setClicked(false);
+                }
+            }catch(error: any){
+                console.error("Error fetching Resultats:", error);
+                toast({
+                    title: "Error",
+                    description: `Failed to load Results: ${error.message}`,
+                    variant: "destructive",
+                });
+                setX('');setY('');setZ('');setW('');
+            }
+        }
+
+        if (bureau?.id !== undefined) {
+            fetchAndPopulateResultats(bureau.id);
+        }else{
+            setX('');setY('');setZ('');setW('');
+            setClicked(false);
+        }
+
     }, [selectedItem])
 
     const [kasim, setKasim] = useState<number>(0);
@@ -194,13 +274,103 @@ export default function FormTab3({ onNewEntry, entryId }: FormTab3Props) { // Re
        setKasim(Number(X)/ selectedBureau.nombreSieges);
 
     },[clicked, selectedBureau])
-    
 
-    // Table sample data
-    // const MOCK_TABLE_ROWS = [
-    //     { readA: "قيمة ١", readB: "قيمة ٢", readC: "قيمة ٣" },
-    //     { readA: "قيمة ٤", readB: "قيمة ٥", readC: "قيمة ٦" },
-    // ];
+    useEffect(() => {
+        if(shouldSave){
+            const saveResult = async () => {
+                if(!entryId) {
+                    logout();
+                    return;
+                }
+
+                try {
+                    const token = localStorage.getItem("auth_token");
+                    if(!token){
+                        toast({
+                            title: "Authentication Required",
+                            description: "Please log in to view prefectures.",
+                            variant: "destructive",
+                        });
+                        logout();
+                        return;
+                    }
+
+                    if(!selectedBureau || !selectedBureau.listes || selectedBureau.listes.length === 0) {
+                        toast({
+                            title: "Error",
+                            description: "No bureau or lists selected to save results for.",
+                            variant: "destructive",
+                        })
+                        return;
+                    }
+
+                    const currentNumInscrits: number = Number(X);
+                    const currentNumElect: number= Number(Y);
+                    const currentNumBullVoteNuls: number = Number(Z);
+                    const currentNumVotesExprimes: number = Number(W);
+
+                    const results: ResultatsDto[] = (selectedBureau as selectedBureauWithID).listes.flatMap((liste: ListeDto) => {
+                        if (liste.id === undefined){
+                            return [];
+                        }
+                       
+                        return [{
+                            bureauxId: (selectedBureau as selectedBureauWithID).id,
+                            listeId: liste.id,
+                            numInscrits: currentNumInscrits,
+                            numElecteurs: currentNumElect,
+                            numBullVoteNuls: currentNumBullVoteNuls,
+                            numVotesExprimes: currentNumVotesExprimes,
+                        }]
+                    });
+
+                    console.table(results)
+
+                    if(results.length === 0){
+                        toast({
+                            title: "Error",
+                            description: "No valid results to save.",
+                            variant: "destructive",
+                        });
+                        return;
+                    }
+                    const response = await fetch("api/Resultats/bulk", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${token}`,
+                       },
+                       body: JSON.stringify(results),
+                    });
+
+                    if(!response.ok){
+                        const errorData = await response.json();
+                        throw new Error(errorData.message || 'Failed tos save results')
+                    }
+
+                    const responseData = await response.json();
+                    console.log(responseData);
+                    toast({
+                            title: "Success",
+                            description: "Results saved successfully.",
+                    });
+
+                    setShouldSave(false)
+                }catch(error: any){
+                    console.error("Error saving results:", error);
+                    toast({
+                        title: "Error",
+                        description: error.message || "An unexpected error occurred.",
+                        variant: "destructive",
+                    });
+                }finally{
+                    setShouldSave(false)
+                }
+            }
+            saveResult();
+        }
+    }, [shouldSave])
+    
 
     const handleCalc = () => {
         // Convert to numbers for calculation, handle potential empty strings as 0
@@ -229,7 +399,8 @@ export default function FormTab3({ onNewEntry, entryId }: FormTab3Props) { // Re
             });
             return;
         }
-   
+        
+        setShouldSave(true);
         setError("");
         setClicked(true);
         setSuccess("تم الحساب بنجاح");
@@ -303,9 +474,11 @@ export default function FormTab3({ onNewEntry, entryId }: FormTab3Props) { // Re
                             <select
                                 className="gov-select"
                                 value={selectedItem}
-                                onChange={e => {setSelectedItem(Number(e.target.value));
+                                onChange={e => {
+                                    const newValue = Number(e.target.value);
+                                    setSelectedItem(newValue);
                                     setClicked(false);
-                                    console.log(selectedItem);
+                                    // console.log("/////////////////"+selectedItem);
                                 }}
                             >
                                 <option value="">{LABELS.choosePlaceholder}</option>

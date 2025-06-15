@@ -17,6 +17,7 @@ namespace projetStage.Server.Models
         public string? PnAgentListe { get; set; }
         public int NumListe { get; set; }
         public int? numVotes { get; set; }
+        public ICollection<Resultats> Resultats { get; set; } = new List<Resultats>();
 
     }
 }

@@ -5,24 +5,24 @@
 namespace projetStage.Server.Migrations
 {
     /// <inheritdoc />
-    public partial class AddNumVotesToListesTable : Migration
+    public partial class update1 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<int>(
-                name: "numVotes",
-                table: "Listes",
-                type: "int",
-                nullable: true);
+            migrationBuilder.RenameColumn(
+                name: "NumElect",
+                table: "Resultats",
+                newName: "NumElecteurs");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "numVotes",
-                table: "Listes");
+            migrationBuilder.RenameColumn(
+                name: "NumElecteurs",
+                table: "Resultats",
+                newName: "NumElect");
         }
     }
 }

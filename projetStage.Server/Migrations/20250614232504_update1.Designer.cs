@@ -12,8 +12,8 @@ using projetStage.Server;
 namespace projetStage.Server.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250611141449_AddResultatstable")]
-    partial class AddResultatstable
+    [Migration("20250614232504_update1")]
+    partial class update1
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -189,35 +189,29 @@ namespace projetStage.Server.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("BureauId")
+                    b.Property<int>("BureauxId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("ListeId")
+                    b.Property<int>("ListeId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("bureauxId")
+                    b.Property<int>("NumBullVoteNuls")
                         .HasColumnType("int");
 
-                    b.Property<int?>("listesId")
+                    b.Property<int>("NumElecteurs")
                         .HasColumnType("int");
 
-                    b.Property<int>("numBulletsNuls")
+                    b.Property<int>("NumInscrits")
                         .HasColumnType("int");
 
-                    b.Property<int>("numElecteurs")
-                        .HasColumnType("int");
-
-                    b.Property<int>("numInscrits")
-                        .HasColumnType("int");
-
-                    b.Property<int>("numVotesExprimes")
+                    b.Property<int>("NumVotesExprimes")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("bureauxId");
+                    b.HasIndex("BureauxId");
 
-                    b.HasIndex("listesId");
+                    b.HasIndex("ListeId");
 
                     b.ToTable("Resultats");
                 });
@@ -239,6 +233,10 @@ namespace projetStage.Server.Migrations
                         .HasColumnType("nvarchar(255)");
 
                     b.Property<string>("Password")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Role")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -320,17 +318,21 @@ namespace projetStage.Server.Migrations
 
             modelBuilder.Entity("projetStage.Server.Models.Resultats", b =>
                 {
-                    b.HasOne("projetStage.Server.Models.Bureaux", "bureaux")
+                    b.HasOne("projetStage.Server.Models.Bureaux", "Bureaux")
                         .WithMany("Resultats")
-                        .HasForeignKey("bureauxId");
+                        .HasForeignKey("BureauxId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
-                    b.HasOne("projetStage.Server.Models.Listes", "listes")
+                    b.HasOne("projetStage.Server.Models.Listes", "Listes")
                         .WithMany("Resultats")
-                        .HasForeignKey("listesId");
+                        .HasForeignKey("ListeId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
-                    b.Navigation("bureaux");
+                    b.Navigation("Bureaux");
 
-                    b.Navigation("listes");
+                    b.Navigation("Listes");
                 });
 
             modelBuilder.Entity("projetStage.Server.Models.Bureaux", b =>

@@ -12,8 +12,8 @@ using projetStage.Server;
 namespace projetStage.Server.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250525182314_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20250614182636_init2")]
+    partial class init2
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -24,6 +24,28 @@ namespace projetStage.Server.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("projetStage.Server.Models.Bureaux", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DashboardEntryId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(255)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DashboardEntryId");
+
+                    b.ToTable("Bureaux");
+                });
 
             modelBuilder.Entity("projetStage.Server.Models.Circonscription", b =>
                 {
@@ -93,6 +115,55 @@ namespace projetStage.Server.Migrations
                     b.ToTable("DashboardEntries");
                 });
 
+            modelBuilder.Entity("projetStage.Server.Models.Listes", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BureauId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NumListe")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PartiId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PnAgentListe")
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<int?>("numVotes")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BureauId");
+
+                    b.HasIndex("PartiId");
+
+                    b.ToTable("Listes");
+                });
+
+            modelBuilder.Entity("projetStage.Server.Models.Partis", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(255)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Partis");
+                });
+
             modelBuilder.Entity("projetStage.Server.Models.Prefecture", b =>
                 {
                     b.Property<int>("Id")
@@ -108,6 +179,41 @@ namespace projetStage.Server.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Prefectures");
+                });
+
+            modelBuilder.Entity("projetStage.Server.Models.Resultats", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BureauxId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ListeId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NumBullVoteNuls")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NumElect")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NumInscrits")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NumVotesExprimes")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BureauxId");
+
+                    b.HasIndex("ListeId");
+
+                    b.ToTable("Resultats");
                 });
 
             modelBuilder.Entity("projetStage.Server.Models.User", b =>
@@ -130,12 +236,27 @@ namespace projetStage.Server.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Email")
                         .IsUnique();
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("projetStage.Server.Models.Bureaux", b =>
+                {
+                    b.HasOne("projetStage.Server.Models.DashboardEntry", "DashboardEntry")
+                        .WithMany("Bureaux")
+                        .HasForeignKey("DashboardEntryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DashboardEntry");
                 });
 
             modelBuilder.Entity("projetStage.Server.Models.Circonscription", b =>
@@ -176,9 +297,69 @@ namespace projetStage.Server.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("projetStage.Server.Models.Listes", b =>
+                {
+                    b.HasOne("projetStage.Server.Models.Bureaux", "Bureaux")
+                        .WithMany("Listes")
+                        .HasForeignKey("BureauId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("projetStage.Server.Models.Partis", "Partis")
+                        .WithMany("Listes")
+                        .HasForeignKey("PartiId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Bureaux");
+
+                    b.Navigation("Partis");
+                });
+
+            modelBuilder.Entity("projetStage.Server.Models.Resultats", b =>
+                {
+                    b.HasOne("projetStage.Server.Models.Bureaux", "Bureaux")
+                        .WithMany("Resultats")
+                        .HasForeignKey("BureauxId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("projetStage.Server.Models.Listes", "Listes")
+                        .WithMany("Resultats")
+                        .HasForeignKey("ListeId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Bureaux");
+
+                    b.Navigation("Listes");
+                });
+
+            modelBuilder.Entity("projetStage.Server.Models.Bureaux", b =>
+                {
+                    b.Navigation("Listes");
+
+                    b.Navigation("Resultats");
+                });
+
             modelBuilder.Entity("projetStage.Server.Models.Circonscription", b =>
                 {
                     b.Navigation("DashboardEntries");
+                });
+
+            modelBuilder.Entity("projetStage.Server.Models.DashboardEntry", b =>
+                {
+                    b.Navigation("Bureaux");
+                });
+
+            modelBuilder.Entity("projetStage.Server.Models.Listes", b =>
+                {
+                    b.Navigation("Resultats");
+                });
+
+            modelBuilder.Entity("projetStage.Server.Models.Partis", b =>
+                {
+                    b.Navigation("Listes");
                 });
 
             modelBuilder.Entity("projetStage.Server.Models.Prefecture", b =>

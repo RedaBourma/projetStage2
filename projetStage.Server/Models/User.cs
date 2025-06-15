@@ -17,6 +17,8 @@ namespace projetStage.Server.Models
         [Required]
         public string Password { get; set; }
 
+        public string Role { get; set; } = "User"; // Default role is User
+
         public ICollection<DashboardEntry> DashboardEntries { get; set; } 
     }
 }

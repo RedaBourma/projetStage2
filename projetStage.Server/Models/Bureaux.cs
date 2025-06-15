@@ -13,6 +13,7 @@ namespace projetStage.Server.Models
         public int DashboardEntryId { get; set; }
         public DashboardEntry? DashboardEntry { get; set; }
         public ICollection<Listes> Listes { get; set; } = new List<Listes>();
+        public ICollection<Resultats> Resultats { get; set; } = new List<Resultats>();
 
     }
 }
